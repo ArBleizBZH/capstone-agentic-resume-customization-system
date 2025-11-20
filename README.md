@@ -449,8 +449,17 @@ cat logs/metrics.log
 - [x] Empties possible_quality_matches after validation
 - [x] Torch-passing to Resume Writing Agent
 
+### ✅ Sprint 008: Resume Writing Agent
+- [x] Resume Writing Agent implemented
+- [x] Achievement reordering within jobs by relevance
+- [x] Certification pruning (remove irrelevant)
+- [x] High fidelity preservation (no rephrasing/adding)
+- [x] Iteration tracking for write-critique loop
+- [x] Critic feedback handling
+- [x] Gen1 proof of concept (highlighting and pruning)
+
 ### 🔄 Upcoming Sprints
-- Sprint 008: Resume Writing Agent
+- Sprint 009: Resume Critic Agent
 - Sprint 007: Qualifications Matching Agent
 - Sprint 008: Resume Writing Agent
 - Sprint 009: Resume Critic Agent
