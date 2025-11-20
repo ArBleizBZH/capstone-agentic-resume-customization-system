@@ -55,12 +55,12 @@ def create_application_documents_agent():
     Returns:
         LlmAgent: The configured Application Documents Agent with MCP filesystem and ingest agents
     """
-    # Import ingest agents (will be implemented in Sprints 004-005)
+    # Import ingest agents (implemented in Sprints 004-005)
     from src.agents.resume_ingest_agent import create_resume_ingest_agent
-    from src.agents.jd_ingest_agent import create_jd_ingest_agent
+    from src.agents.job_description_ingest_agent import create_job_description_ingest_agent
 
     resume_ingest_agent = create_resume_ingest_agent()
-    jd_ingest_agent = create_jd_ingest_agent()
+    job_description_ingest_agent = create_job_description_ingest_agent()
 
     # Create MCP filesystem toolset
     # Restricts access to only the input_documents directory for security
@@ -102,7 +102,7 @@ PHASE 2: Convert to Structured JSON (can run in parallel)
 7. Call resume_ingest_agent to convert the raw resume to structured JSON
    - This agent will read 'resume' from session state
    - It will save structured data to session state as 'json_resume'
-8. Call jd_ingest_agent to convert the raw job description to structured JSON
+8. Call job_description_ingest_agent to convert the raw job description to structured JSON
    - This agent will read 'job_description' from session state
    - It will save structured data to session state as 'json_job_description'
 9. You may call both ingest agents in parallel since they are independent
@@ -129,7 +129,7 @@ QUALITY REQUIREMENTS:
             save_resume_to_session,
             save_jd_to_session,
             AgentTool(agent=resume_ingest_agent),
-            AgentTool(agent=jd_ingest_agent),
+            AgentTool(agent=job_description_ingest_agent),
         ],
     )
 

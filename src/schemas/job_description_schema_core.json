@@ -1,0 +1,139 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Job Description Core Schema - Gen1 (Option B)",
+  "description": "Structured schema for job description data with categorized qualifications. Optimized for Matching Agent comparison with resume schema.",
+  "type": "object",
+  "properties": {
+    "job_info": {
+      "type": "object",
+      "description": "Core job and company information",
+      "properties": {
+        "company_name": {
+          "type": "string",
+          "description": "Name of the hiring company"
+        },
+        "job_title": {
+          "type": "string",
+          "description": "Official job title for the position"
+        },
+        "location": {
+          "type": "string",
+          "description": "Job location (city, state, remote/hybrid/onsite)"
+        },
+        "employment_type": {
+          "type": "string",
+          "description": "Type of employment (e.g., Full-time, Part-time, Contract, Temporary)"
+        },
+        "about_role": {
+          "type": "string",
+          "description": "Description of the role and its purpose"
+        },
+        "about_company": {
+          "type": "string",
+          "description": "Company description, mission, and background (for gen4 Company Research Agent)"
+        }
+      },
+      "required": ["company_name", "job_title"]
+    },
+    "responsibilities": {
+      "type": "array",
+      "description": "Key responsibilities and duties of the role",
+      "items": {
+        "type": "string"
+      }
+    },
+    "qualifications": {
+      "type": "object",
+      "description": "Required and preferred qualifications, categorized for precise matching",
+      "properties": {
+        "required": {
+          "type": "object",
+          "description": "Must-have qualifications",
+          "properties": {
+            "experience_years": {
+              "type": "string",
+              "description": "Years of experience requirement (e.g., '5+ years backend development')"
+            },
+            "technical_skills": {
+              "type": "array",
+              "description": "Required technical skills (programming languages, tools, platforms)",
+              "items": {
+                "type": "string"
+              }
+            },
+            "domain_knowledge": {
+              "type": "array",
+              "description": "Required domain expertise (methodologies, architectures, concepts)",
+              "items": {
+                "type": "string"
+              }
+            },
+            "soft_skills": {
+              "type": "array",
+              "description": "Required soft skills (communication, leadership, collaboration)",
+              "items": {
+                "type": "string"
+              }
+            },
+            "education": {
+              "type": "array",
+              "description": "Required educational background",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "preferred": {
+          "type": "object",
+          "description": "Nice-to-have qualifications",
+          "properties": {
+            "technical_skills": {
+              "type": "array",
+              "description": "Preferred technical skills",
+              "items": {
+                "type": "string"
+              }
+            },
+            "domain_knowledge": {
+              "type": "array",
+              "description": "Preferred domain expertise",
+              "items": {
+                "type": "string"
+              }
+            },
+            "soft_skills": {
+              "type": "array",
+              "description": "Preferred soft skills",
+              "items": {
+                "type": "string"
+              }
+            },
+            "certifications": {
+              "type": "array",
+              "description": "Preferred professional certifications",
+              "items": {
+                "type": "string"
+              }
+            },
+            "other": {
+              "type": "array",
+              "description": "Other preferred qualifications not fitting above categories",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "benefits": {
+      "type": "array",
+      "description": "Company benefits and perks offered",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": ["job_info"]
+}

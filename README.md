@@ -426,8 +426,15 @@ cat logs/metrics.log
 - [x] Rich error handling
 - [x] Session state integration
 
+### ✅ Sprint 005: Job Description Ingest Agent
+- [x] Job Description Ingest Agent implemented
+- [x] Structured schema with categorized qualifications (Option B)
+- [x] Required vs preferred separation
+- [x] Smart categorization for matching optimization
+- [x] Company information capture
+- [x] Parallel execution with Resume Ingest Agent
+
 ### 🔄 Upcoming Sprints
-- Sprint 005: Job Description Ingest Agent
 - Sprint 006: Resume Refiner Agent
 - Sprint 007: Qualifications Matching Agent
 - Sprint 008: Resume Writing Agent
