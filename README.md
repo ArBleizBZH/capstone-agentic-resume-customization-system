@@ -405,10 +405,28 @@ cat logs/metrics.log
 - [x] App + Runner with InMemorySessionService
 - [x] Basic test harness working
 
+### ✅ Sprint 002: Full Observability with Context
+- [x] Enhanced logging with multiple log files
+- [x] Metrics tracking plugin
+- [x] Development vs production modes
+- [x] Complete observability setup
+
+### ✅ Sprint 003: Job Application Agent + Application Documents Agent
+- [x] Job Application Agent fully implemented
+- [x] Application Documents Agent with MCP filesystem
+- [x] Session state management
+- [x] AgentTool delegation pattern
+- [x] Sample input documents
+
+### ✅ Sprint 004: Resume Ingest Agent
+- [x] Resume Ingest Agent implemented
+- [x] Tier 1 core JSON schema
+- [x] job_id tracking system (oldest = job_001)
+- [x] High-fidelity parsing with no fabrication
+- [x] Rich error handling
+- [x] Session state integration
+
 ### 🔄 Upcoming Sprints
-- Sprint 002: Full observability with context
-- Sprint 003: Job Application Agent + Ingest Agents
-- Sprint 004: Resume Ingest Agent
 - Sprint 005: Job Description Ingest Agent
 - Sprint 006: Resume Refiner Agent
 - Sprint 007: Qualifications Matching Agent

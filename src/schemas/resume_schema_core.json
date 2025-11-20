@@ -1,0 +1,188 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Resume Core Schema - Tier 1",
+  "description": "Simplified core schema for resume data parsing (gen1). Tier 2 contextual fields deferred to gen2+.",
+  "type": "object",
+  "properties": {
+    "contact_info": {
+      "type": "object",
+      "description": "Contact information for the candidate",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Full name of the candidate"
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address"
+        },
+        "address": {
+          "type": "string",
+          "description": "Physical address or location"
+        },
+        "phone": {
+          "type": "string",
+          "description": "Phone number"
+        },
+        "linkedin": {
+          "type": "string",
+          "description": "LinkedIn profile URL"
+        },
+        "github": {
+          "type": "string",
+          "description": "GitHub profile URL"
+        }
+      },
+      "required": ["name", "email"]
+    },
+    "profile_summary": {
+      "type": "object",
+      "description": "Professional summary and highlights",
+      "properties": {
+        "professional_summary": {
+          "type": "string",
+          "description": "Brief professional summary paragraph"
+        },
+        "professional_highlights": {
+          "type": "array",
+          "description": "Key professional highlights or achievements",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "work_history": {
+      "type": "array",
+      "description": "Employment history",
+      "items": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "description": "Unique identifier for this job (e.g., job_001 for oldest, incrementing for newer jobs)"
+          },
+          "job_company": {
+            "type": "string",
+            "description": "Company name"
+          },
+          "job_title": {
+            "type": "string",
+            "description": "Official job title"
+          },
+          "job_operated_as": {
+            "type": "string",
+            "description": "Actual level of operation if different from official title (captures seniority-leakage)"
+          },
+          "job_location": {
+            "type": "string",
+            "description": "Job location (city, state, country)"
+          },
+          "job_employment_dates": {
+            "type": "string",
+            "description": "Employment date range (e.g., 'Jan 2021 - Present')"
+          },
+          "job_summary": {
+            "type": "string",
+            "description": "Brief summary of the role and responsibilities"
+          },
+          "job_achievements": {
+            "type": "array",
+            "description": "Key achievements and accomplishments in this role",
+            "items": {
+              "type": "string"
+            }
+          },
+          "job_technologies": {
+            "type": "array",
+            "description": "Technologies used in this role",
+            "items": {
+              "type": "string"
+            }
+          },
+          "job_skills": {
+            "type": "array",
+            "description": "Skills demonstrated or developed in this role",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["job_id", "job_company", "job_title"]
+      }
+    },
+    "skills": {
+      "type": "object",
+      "description": "Skills organized by category. Category names are flexible (e.g., 'Programming & Scripting', 'Cloud & Infrastructure', 'AI & ML')",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "education": {
+      "type": "array",
+      "description": "Educational background",
+      "items": {
+        "type": "object",
+        "properties": {
+          "institution": {
+            "type": "string",
+            "description": "Name of the educational institution"
+          },
+          "dates": {
+            "type": "string",
+            "description": "Date range of attendance"
+          },
+          "graduation_year": {
+            "type": "string",
+            "description": "Year of graduation"
+          },
+          "diploma": {
+            "type": "string",
+            "description": "Degree or diploma obtained"
+          }
+        },
+        "required": ["institution"]
+      }
+    },
+    "certifications_licenses": {
+      "type": "array",
+      "description": "Professional certifications and licenses",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the certification or license"
+          },
+          "issued_by": {
+            "type": "string",
+            "description": "Issuing organization"
+          },
+          "issued_date": {
+            "type": "string",
+            "description": "Date issued"
+          },
+          "skills": {
+            "type": "array",
+            "description": "Skills covered by this certification",
+            "items": {
+              "type": "string"
+            }
+          },
+          "additional_endorsements": {
+            "type": "array",
+            "description": "Additional endorsements or specializations",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["name"]
+      }
+    }
+  },
+  "required": ["contact_info"]
+}
