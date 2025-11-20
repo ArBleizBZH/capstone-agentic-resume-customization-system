@@ -50,8 +50,11 @@ Thumbs.db
 # Documentation folders (not for version control)
 Engineering_Documentation/
 Project_Documentation/
-docs/
 CLAUDE.md
+
+# Allow sprint documentation
+!docs/
+!docs/sprints/
 
 # Test data (if sensitive)
 data/resumes/
