@@ -458,8 +458,17 @@ cat logs/metrics.log
 - [x] Critic feedback handling
 - [x] Gen1 proof of concept (highlighting and pruning)
 
+### ✅ Sprint 009: Resume Critic Agent
+- [x] Resume Critic Agent implemented
+- [x] Two-pass review (JSON + raw documents)
+- [x] Issues detection across multiple categories
+- [x] Owns write-critique loop (max 5 iterations)
+- [x] Returns to Resume Refiner Agent when complete
+- [x] Raw document disambiguation
+- [x] Fabrication and fidelity violation detection
+
 ### 🔄 Upcoming Sprints
-- Sprint 009: Resume Critic Agent
+- Sprint 010: Tools implementation
 - Sprint 007: Qualifications Matching Agent
 - Sprint 008: Resume Writing Agent
 - Sprint 009: Resume Critic Agent
