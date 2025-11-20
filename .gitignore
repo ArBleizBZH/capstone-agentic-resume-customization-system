@@ -56,3 +56,6 @@ CLAUDE.md
 # Test data (if sensitive)
 data/resumes/
 data/job_descriptions/
+
+# Input documents (user data, not version controlled)
+src/input_documents/*.md
