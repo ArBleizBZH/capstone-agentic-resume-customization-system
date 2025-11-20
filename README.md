@@ -467,8 +467,16 @@ cat logs/metrics.log
 - [x] Raw document disambiguation
 - [x] Fabrication and fidelity violation detection
 
+### ✅ Sprint 010: Tools Implementation
+- [x] All tools validated and documented
+- [x] MCP filesystem integration complete
+- [x] 10 session state tool functions implemented
+- [x] AgentTool delegation pattern complete
+- [x] 17 session state keys accounted for
+- [x] No missing functionality for gen1
+
 ### 🔄 Upcoming Sprints
-- Sprint 010: Tools implementation
+- Sprint 011: Memory artifacts
 - Sprint 007: Qualifications Matching Agent
 - Sprint 008: Resume Writing Agent
 - Sprint 009: Resume Critic Agent
