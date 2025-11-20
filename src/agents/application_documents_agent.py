@@ -6,6 +6,7 @@ Sprint 003: Uses MCP filesystem server for file reading operations.
 
 from google.adk.agents import LlmAgent
 from google.adk.models.google_llm import Gemini
+from google.adk.tools import AgentTool
 from google.adk.tools.mcp_tool.mcp_toolset import McpToolset
 from google.adk.tools.mcp_tool.mcp_session_manager import StdioConnectionParams
 from google.adk.tools.tool_context import ToolContext
@@ -24,7 +25,7 @@ def save_resume_to_session(tool_context: ToolContext, content: str) -> dict:
     Returns:
         Dictionary with status
     """
-    tool_context.state["original_resume"] = content
+    tool_context.state["resume"] = content
     return {"status": "success", "message": "Resume saved to session state"}
 
 
@@ -38,20 +39,28 @@ def save_jd_to_session(tool_context: ToolContext, content: str) -> dict:
     Returns:
         Dictionary with status
     """
-    tool_context.state["original_jd"] = content
+    tool_context.state["job_description"] = content
     return {"status": "success", "message": "Job description saved to session state"}
 
 
 def create_application_documents_agent():
     """Create and return the Application Documents Agent.
 
-    This agent handles loading and validating resume and job description files
-    using the MCP filesystem server. It ensures data quality before passing to the
-    workflow.
+    This agent coordinates the complete document processing workflow:
+    1. Loads raw resume and job description files using MCP filesystem
+    2. Saves raw content to session state
+    3. Delegates to ingest agents to convert raw documents to structured JSON
+    4. Ingest agents save structured data to session state
 
     Returns:
-        LlmAgent: The configured Application Documents Agent with MCP filesystem tools
+        LlmAgent: The configured Application Documents Agent with MCP filesystem and ingest agents
     """
+    # Import ingest agents (will be implemented in Sprints 004-005)
+    from src.agents.resume_ingest_agent import create_resume_ingest_agent
+    from src.agents.jd_ingest_agent import create_jd_ingest_agent
+
+    resume_ingest_agent = create_resume_ingest_agent()
+    jd_ingest_agent = create_jd_ingest_agent()
 
     # Create MCP filesystem toolset
     # Restricts access to only the input_documents directory for security
@@ -76,31 +85,51 @@ def create_application_documents_agent():
             retry_options=retry_config,
             api_key=GOOGLE_API_KEY
         ),
-        description="Handles loading and validation of application documents (resume and job description).",
-        instruction="""You are the Application Documents Agent, responsible for loading and validating resume and job description files.
+        description="Coordinates loading, validation, and ingestion of application documents (resume and job description).",
+        instruction="""You are the Application Documents Agent, responsible for the complete document processing workflow.
 
-Your workflow:
-1. Use the read_file tool to load resume.md
-2. Validate the resume content is non-empty and readable
-3. Call save_resume_to_session with the resume content to save it to session state
-4. Use the read_file tool to load job_description.md
-5. Validate the job description content is non-empty and readable
-6. Call save_jd_to_session with the job description content to save it to session state
-7. If both files are valid and saved, confirm success
-8. If either file is missing, empty, or unreadable, report the specific error
+WORKFLOW (execute in this order):
 
-Quality checks:
+PHASE 1: Load Raw Documents
+1. Use read_file tool to load resume.md from the filesystem
+2. Validate resume content is non-empty and readable
+3. Call save_resume_to_session with the resume content to save to session state as 'resume'
+4. Use read_file tool to load job_description.md from the filesystem
+5. Validate job description content is non-empty and readable
+6. Call save_jd_to_session with the job description content to save to session state as 'job_description'
+
+PHASE 2: Convert to Structured JSON (can run in parallel)
+7. Call resume_ingest_agent to convert the raw resume to structured JSON
+   - This agent will read 'resume' from session state
+   - It will save structured data to session state as 'json_resume'
+8. Call jd_ingest_agent to convert the raw job description to structured JSON
+   - This agent will read 'job_description' from session state
+   - It will save structured data to session state as 'json_job_description'
+9. You may call both ingest agents in parallel since they are independent
+
+COMPLETION:
+10. Confirm success only after all four session state keys are populated:
+    - 'resume' (raw text)
+    - 'job_description' (raw text)
+    - 'json_resume' (structured JSON)
+    - 'json_job_description' (structured JSON)
+
+ERROR HANDLING:
+- If any file is missing, empty, or unreadable, report the specific error
+- If any ingest agent fails, report the specific error
+- Do not proceed to next phase if current phase fails
+
+QUALITY REQUIREMENTS:
 - Verify files exist and can be read
-- Check content is not empty
-- Ensure content appears to be text (not binary or corrupted)
-
-All data must be saved to session state using the save functions provided.
-Only confirm success after both files are loaded, validated, and saved to session state.
+- Ensure content is not empty or corrupted
+- Validate that ingest agents successfully create structured data
 """,
         tools=[
             filesystem_mcp,
             save_resume_to_session,
             save_jd_to_session,
+            AgentTool(agent=resume_ingest_agent),
+            AgentTool(agent=jd_ingest_agent),
         ],
     )
 

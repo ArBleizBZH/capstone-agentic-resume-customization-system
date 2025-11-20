@@ -65,7 +65,7 @@ def create_runner():
     plugins = [LoggingPlugin()]  # Always include base logging
     metrics_plugin = None
 
-    if ENV == "development":
+    if ENV != "production":
         # Add custom metrics plugin for development observability
         metrics_plugin = ResumeOptimizationMetricsPlugin()
         plugins.append(metrics_plugin)
