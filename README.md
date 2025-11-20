@@ -434,8 +434,15 @@ cat logs/metrics.log
 - [x] Company information capture
 - [x] Parallel execution with Resume Ingest Agent
 
+### ✅ Sprint 006: Resume Refiner Agent
+- [x] Resume Refiner Agent implemented
+- [x] Simple orchestrator pattern
+- [x] Torch-passing workflow initiation
+- [x] Rich error handling with context
+- [x] Production-quality instruction
+
 ### 🔄 Upcoming Sprints
-- Sprint 006: Resume Refiner Agent
+- Sprint 007: Qualifications Matching Agent
 - Sprint 007: Qualifications Matching Agent
 - Sprint 008: Resume Writing Agent
 - Sprint 009: Resume Critic Agent
