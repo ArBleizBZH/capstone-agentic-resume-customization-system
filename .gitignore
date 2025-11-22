@@ -51,10 +51,11 @@ Thumbs.db
 Engineering_Documentation/
 Project_Documentation/
 CLAUDE.md
+docs/
 
-# Allow sprint documentation
-!docs/
-!docs/sprints/
+# Exclude temporary and context files
+SPRINT_*_STATUS.md
+test_output.txt
 
 # Test data (if sensitive)
 data/resumes/

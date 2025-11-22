@@ -1,13 +1,13 @@
-"""Job Description Ingest Agent - Converts raw job description text to structured JSON.
+"""Job Description Ingest Agent - Converts job description text to structured JSON.
 
 Based on Day 2a notebook patterns for LlmAgent with tool functions.
-Sprint 005: Parses job description into structured schema with categorized qualifications.
 """
 
 import json
 from google.adk.agents import LlmAgent
 from google.adk.models.google_llm import Gemini
 from google.adk.tools.tool_context import ToolContext
+from google.genai import types
 from src.config.model_config import GEMINI_FLASH_MODEL, retry_config, GOOGLE_API_KEY
 
 
@@ -22,8 +22,20 @@ def save_json_job_description_to_session(tool_context: ToolContext, json_data: s
         Dictionary with status and message
     """
     try:
+        # Strip markdown code blocks if LLM adds them
+        clean_json = json_data.replace("```json", "").replace("```", "").strip()
+
+        # DEBUG: Log JSON and attempt to parse
+        print(f"\n=== DEBUG JD JSON ===")
+        print(f"Full JSON length: {len(clean_json)}")
+        print(f"First 500 chars: {clean_json[:500]}")
+        print(f"Last 500 chars: {clean_json[-500:]}")
+        if len(clean_json) > 2140:
+            print(f"Context around char 2140: {clean_json[2100:2180]}")
+        print(f"===\n")
+
         # Parse JSON string to validate format
-        job_description_dict = json.loads(json_data)
+        job_description_dict = json.loads(clean_json)
 
         # Validate required fields
         if "job_info" not in job_description_dict:
@@ -72,7 +84,7 @@ def save_json_job_description_to_session(tool_context: ToolContext, json_data: s
 def create_job_description_ingest_agent():
     """Create and return the Job Description Ingest Agent.
 
-    This agent converts raw job description text into structured JSON with
+    This agent converts job description text into structured JSON with
     categorized qualifications (Option B structure) optimized for matching.
 
     Returns:
@@ -84,10 +96,17 @@ def create_job_description_ingest_agent():
         model=Gemini(
             model=GEMINI_FLASH_MODEL,
             retry_options=retry_config,
-            api_key=GOOGLE_API_KEY
+            api_key=GOOGLE_API_KEY,
+            generate_content_config=types.GenerateContentConfig(
+                tool_config=types.ToolConfig(
+                    function_calling_config=types.FunctionCallingConfig(
+                        mode=types.FunctionCallingConfigMode.ANY
+                    )
+                )
+            )
         ),
-        description="Converts raw job description text to structured JSON with categorized qualifications.",
-        instruction="""You are the Job Description Ingest Agent, responsible for converting raw job description text
+        description="Converts job description text to structured JSON with categorized qualifications.",
+        instruction="""You are the Job Description Ingest Agent, responsible for converting job description text
 into a structured JSON format with categorized qualifications that enables precise matching by the
 Qualifications Matching Agent.
 
@@ -100,14 +119,50 @@ CRITICAL PRINCIPLES:
 
 WORKFLOW:
 
-Step 1: READ JOB DESCRIPTION FROM SESSION STATE
-- Access tool_context.state["job_description"] to get the raw job description text
-- If job_description key is missing or empty, return error immediately:
-  "Error: No job description found in session state. Job description must be loaded first."
+Step 1: RECEIVE JOB DESCRIPTION CONTENT AS PARAMETER
+- You will receive the job description text as a parameter named "job_description_content"
+- If job_description_content parameter is missing or empty, return error immediately: "ERROR: {{job_description_ingest_agent}} No job description content provided"
 
-Step 2: PARSE JOB DESCRIPTION INTO STRUCTURED SECTIONS
+Step 2: UNDERSTAND THE TARGET JSON STRUCTURE
+You must generate JSON matching this exact schema structure.
+Top-level keys: job_info, responsibilities, qualifications, benefits
 
-A. JOB INFORMATION (REQUIRED SECTION)
+job_info (REQUIRED object):
+  - company_name (required string)
+  - job_title (required string)
+  - location, employment_type, about_role, about_company (all optional strings)
+
+responsibilities (optional array of strings):
+  - Array of key responsibility descriptions
+
+qualifications (optional object with two sub-keys: required and preferred):
+
+  required (object with optional fields):
+    - experience_years (optional string)
+    - technical_skills (optional array of strings)
+    - domain_knowledge (optional array of strings)
+    - soft_skills (optional array of strings)
+    - education (optional array of strings)
+
+  preferred (object with optional fields):
+    - technical_skills (optional array of strings)
+    - domain_knowledge (optional array of strings)
+    - soft_skills (optional array of strings)
+    - certifications (optional array of strings)
+    - other (optional array of strings)
+
+benefits (optional array of strings):
+  - Array of benefit descriptions
+
+IMPORTANT: Omit any optional sections or fields that have no data (don't include empty objects/arrays).
+
+CRITICAL NO NULLS RULE:
+Do not include keys with null, [], "", or "N/A" values. If the data is not in the source text,
+the key must not appear in the JSON. This prevents empty data from polluting downstream matching.
+
+Step 3: PARSE JOB DESCRIPTION INTO STRUCTURED SECTIONS
+
+A. JOB INFO (REQUIRED SECTION, JSON key: "job_info")
    - company_name (required): Name of the hiring company
    - job_title (required): Official job title for the position
    - location (optional): Job location (city, state, remote/hybrid/onsite)
@@ -115,19 +170,21 @@ A. JOB INFORMATION (REQUIRED SECTION)
    - about_role (optional): Description of the role and its purpose
    - about_company (optional): Company description, mission, background
 
-   ERROR if missing: "Error: Job description missing required information (company_name and job_title)"
+   ERROR if missing: "ERROR: {{job_description_ingest_agent}} Job description missing required information (company_name and job_title)"
 
-B. RESPONSIBILITIES (OPTIONAL SECTION)
+B. RESPONSIBILITIES (OPTIONAL SECTION, JSON key: "responsibilities")
    - Array of key responsibilities and duties
    - Extract from "Responsibilities" or similar section
    OMIT SECTION if job description has no responsibilities listed
 
-C. QUALIFICATIONS (OPTIONAL SECTION, but usually present)
+C. QUALIFICATIONS (OPTIONAL SECTION, JSON key: "qualifications", but usually present)
+   Object with two sub-keys: "required" and "preferred"
+
    Parse qualifications into REQUIRED and PREFERRED categories.
 
    Within each category, organize by type:
 
-   REQUIRED QUALIFICATIONS:
+   REQUIRED QUALIFICATIONS (JSON key: "required"):
    - experience_years (optional string): Years of experience requirement
      Example: "5+ years of backend software development"
 
@@ -147,7 +204,7 @@ C. QUALIFICATIONS (OPTIONAL SECTION, but usually present)
      Examples: "Bachelor's degree in Computer Science", "Equivalent experience"
      Include: Degree requirements, educational background, equivalent experience
 
-   PREFERRED QUALIFICATIONS:
+   PREFERRED QUALIFICATIONS (JSON key: "preferred"):
    - technical_skills (optional array): Preferred technical skills
    - domain_knowledge (optional array): Preferred domain expertise
    - soft_skills (optional array): Preferred soft skills
@@ -166,35 +223,63 @@ C. QUALIFICATIONS (OPTIONAL SECTION, but usually present)
    - "Preferred Qualifications" or "Nice to Have" section -> preferred
    - If unclear, default to required
 
-D. BENEFITS (OPTIONAL SECTION)
+D. BENEFITS (OPTIONAL SECTION, JSON key: "benefits")
    - Array of company benefits and perks
    - Extract from "What We Offer", "Benefits", or similar section
    Examples: "Competitive salary", "Health insurance", "401(k)", "Remote work"
    OMIT SECTION if job description has no benefits listed
 
-Step 3: VALIDATE STRUCTURED DATA
+Step 4: GENERATE STRUCTURED JSON
+- Build the complete JSON object following the schema structure from Step 2
 - Ensure required fields present (company_name, job_title)
 - Verify qualifications are properly categorized
 - Confirm no fabricated data
 - Check that optional empty categories are omitted
+- Convert structured data to valid JSON string with proper escaping
+- IMPORTANT: Ensure all control characters (newlines, tabs, etc.) are properly escaped in JSON strings
+- Use json.dumps() or equivalent to generate properly formatted JSON
 
-Step 4: SAVE TO SESSION STATE
-- Convert structured data to JSON string
-- Call save_json_job_description_to_session(tool_context, json_string)
-- If save fails, return specific error message from function
+Step 5: SAVE TO SESSION STATE
+- Call save_json_job_description_to_session with the JSON string you generated in Step 4
+- The function signature is: save_json_job_description_to_session(tool_context, json_data)
+- You only pass json_data parameter - the ADK framework automatically provides tool_context
+- Check the tool response for status: "error"
+- If status is "error": Log the error and return "ERROR: {{job_description_ingest_agent}} -> {{error message from tool}}" to parent agent, and stop
+- If status is "success": **DO NOT STOP** - immediately proceed to Step 6
 
-Step 5: RETURN SUCCESS CONFIRMATION
-- Report sections parsed
-- Report company name and job title
-- Confirm json_job_description saved to session state
+Step 6: MANDATORY FINAL TEXT RESPONSE
+After the save tool returns "success", you MUST immediately generate a final text response.
+**DO NOT TERMINATE** or **STOP** after the tool call without generating this response.
+
+MANDATORY FINAL RESPONSE FORMAT:
+You MUST use this EXACT format for your final output:
+
+"SUCCESS: Job description content processed and JSON structured for {{company_name}} - {{job_title}}.
+
+JOB_DESCRIPTION_JSON_CONTENT:
+{{the complete, valid JSON string you generated in Step 4}}"
+
+CRITICAL REQUIREMENTS:
+1. The keyword "JOB_DESCRIPTION_JSON_CONTENT:" is REQUIRED for parent agent parsing
+2. Include the COMPLETE JSON string - no truncation or summarization
+3. This is your FINAL AND ONLY remaining action after the tool succeeds
+4. AgentTool creates isolated sessions - parent CANNOT access your session state
+
+CRITICAL RULE: **DO NOT TERMINATE** or **STOP** until you have generated this complete text block with the full JSON content inside.
 
 ERROR HANDLING:
-Return detailed error messages for:
-- Missing job description in session state
-- Missing required fields (company_name, job_title)
-- Invalid data format
-- JSON serialization errors
-- Session state save failures
+This is a Leaf Agent. Follow the ADK three-layer pattern:
+
+When using tools (save_json_job_description_to_session):
+- Check tool response for status: "error"
+- If status is "error": Log error, return "ERROR: {{job_description_ingest_agent}} -> {{error message from tool}}" to parent agent, and stop
+
+For validation errors during processing:
+- If job_description_content parameter is missing or empty: Log error, return "ERROR: {{job_description_ingest_agent}} No job description content provided" to parent agent, and stop
+- If required fields are missing (company_name, job_title): Log error, return "ERROR: {{job_description_ingest_agent}} Missing required job info (company_name and job_title)" to parent agent, and stop
+- If JSON serialization fails: Log error, return "ERROR: {{job_description_ingest_agent}} Failed to serialize job description data to JSON" to parent agent, and stop
+
+Log all errors before returning them to parent agent.
 
 QUALITY REQUIREMENTS:
 - Extract exact wording from source (especially for requirements)

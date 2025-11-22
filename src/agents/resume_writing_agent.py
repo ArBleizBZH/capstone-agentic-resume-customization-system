@@ -1,8 +1,6 @@
 """Resume Writing Agent - Generates optimized resume content.
 
 Based on Day 1a and Day 2a notebook patterns for LlmAgent with AgentTool.
-Sprint 008: Implements achievement reordering and certification pruning (gen1 proof of concept).
-Gen1: Uses Gemini Flash (will use Claude Sonnet 4.5 in future versions).
 """
 
 import json
@@ -10,6 +8,7 @@ from google.adk.agents import LlmAgent
 from google.adk.models.google_llm import Gemini
 from google.adk.tools import AgentTool
 from google.adk.tools.tool_context import ToolContext
+from google.genai import types
 from src.config.model_config import GEMINI_FLASH_MODEL, retry_config, GOOGLE_API_KEY
 
 
@@ -68,39 +67,50 @@ def create_resume_writing_agent():
 
     This agent creates optimized resume candidates by reordering achievements and pruning
     irrelevant content, maintaining high fidelity to original resume.
-    Gen1: Focus on highlighting and pruning. Gen2: Will add rephrasing with Claude Sonnet 4.5.
+    Focus on highlighting and pruning. Gen2: Will add rephrasing with Claude Sonnet 4.5.
+
+    NOTE: Resume Critic Agent will be added to tools after creation to avoid circular dependency.
 
     Returns:
         LlmAgent: The configured Resume Writing Agent
     """
-
-    # Import Resume Critic Agent for torch-passing
-    from src.agents.resume_critic_agent import create_resume_critic_agent
-
-    resume_critic_agent = create_resume_critic_agent()
 
     agent = LlmAgent(
         name="resume_writing_agent",
         model=Gemini(
             model=GEMINI_FLASH_MODEL,
             retry_options=retry_config,
-            api_key=GOOGLE_API_KEY
+            api_key=GOOGLE_API_KEY,
+            generate_content_config=types.GenerateContentConfig(
+                tool_config=types.ToolConfig(
+                    function_calling_config=types.FunctionCallingConfig(
+                        mode=types.FunctionCallingConfigMode.ANY
+                    )
+                )
+            )
         ),
         description="Creates optimized resume candidates by reordering achievements and pruning irrelevant content while maintaining high fidelity.",
         instruction="""You are the Resume Writing Agent, responsible for creating optimized resume candidates that highlight relevant qualifications while maintaining high fidelity to the original resume.
 
-GEN1 FOCUS: Highlighting and Pruning (Not Rewriting)
-- Gen1 focuses on matching + highlighting (hardest tasks for humans)
+FOCUS: Highlighting and Pruning (Not Rewriting)
+- focuses on matching + highlighting (hardest tasks for humans)
 - Proof of concept for core workflow validation
-- Rephrasing and enhancement deferred to gen2 with Claude Sonnet 4.5
+- Rephrasing and enhancement deferred
 
 WORKFLOW:
 
-Step 1: READ FROM SESSION STATE
-- Access tool_context.state["json_resume"] for original resume structure
-- Access tool_context.state["json_job_description"] for job requirements
-- Access tool_context.state["quality_matches"] for validated matches with job_id context
-- If any key missing, return error immediately
+Step 1: RECEIVE AND VALIDATE INPUT PARAMETERS
+- You will receive five required parameters from the Qualifications Matching Agent:
+  * json_resume: JSON string containing original resume structure (for creation)
+  * json_job_description: JSON string containing job requirements (for matching/pruning)
+  * quality_matches: JSON string containing validated matches with job_id context
+  * resume: The original resume text (for fidelity checking)
+  * job_description: The original job description text (for context)
+- Check if all five parameters are present and non-empty
+- If any parameter is missing or empty:
+  * Log the error
+  * Return "ERROR: [ResumeWriting] Missing required input parameters"
+  * Stop processing
 
 Step 2: DETERMINE ITERATION NUMBER
 - Check if critic_issues_XX exists in session state
@@ -114,7 +124,7 @@ Step 3: READ PREVIOUS ITERATION IF APPLICABLE (Iterations 2-5)
   Example: Creating candidate_03 → read resume_candidate_02
 - Read corresponding critic_issues for feedback
   Example: Creating candidate_03 → read critic_issues_02
-- Understand what needs improvement based on Critic feedback
+- Understand what needs improvement based on Resume Critic Agent feedback
 
 Step 4: ANALYZE QUALITY_MATCHES FOR RELEVANT JOBS
 - Extract job_ids from quality_matches resume_source field
@@ -128,13 +138,13 @@ Follow json_resume structure EXACTLY. If uncertain about structure or field requ
 
 A. PRESERVE THESE FIELDS AS-IS (No Modifications):
    - contact_info (all fields)
-   - profile_summary (no changes in gen1)
+   - profile_summary (no changes)
    - Job factual data: job_id, job_company, job_title, job_location, job_employment_dates
-   - job_summary (no rephrasing in gen1)
+   - job_summary (no rephrasing)
    - job_technologies (no modifications)
    - job_skills (no modifications)
    - education (all fields)
-   - skills (preserve structure in gen1)
+   - skills (preserve structure)
 
 B. REORDER ACHIEVEMENTS WITHIN EACH JOB:
    For each job in work_history:
@@ -181,10 +191,10 @@ C. PRUNE IRRELEVANT CERTIFICATIONS:
 D. MAINTAIN STRUCTURE REQUIREMENTS:
    - Job order: Chronological, newest FIRST, oldest last
    - job_id sequence: IMMUTABLE (job_001 = oldest always)
-   - NO rephrasing of any text (gen1 high fidelity)
+   - NO rephrasing of any text (high fidelity)
    - NO adding achievements not in original
    - NO modifying job summaries
-   - NO rewriting professional summary (gen1)
+   - NO rewriting professional summary 
 
 Step 6: INCORPORATE CRITIC FEEDBACK (Iterations 2-5 Only)
 - If creating iteration 2-5, address issues from critic_issues_XX
@@ -193,7 +203,7 @@ Step 6: INCORPORATE CRITIC FEEDBACK (Iterations 2-5 Only)
   * "Certification Y not relevant, should be removed"
   * "Structure issue: missing required field Z"
   * "Fidelity violation: text was modified from original"
-- Apply feedback while maintaining gen1 principles (no rephrasing/adding)
+- Apply feedback while maintaining principles (no rephrasing/adding)
 
 Step 7: VALIDATE OUTPUT
 - Ensure structure matches json_resume exactly
@@ -205,27 +215,64 @@ Step 7: VALIDATE OUTPUT
 Step 8: SAVE TO SESSION STATE
 - Convert resume candidate to JSON string
 - Determine iteration number string ("01", "02", "03", "04", or "05")
-- Call save_resume_candidate_to_session(tool_context, candidate_json, iteration_number)
-- Confirm successful save
+- Call save_resume_candidate_to_session with candidate_json and iteration_number parameters only
+- Note: ADK framework automatically provides tool_context - do not pass it explicitly
+- Check the tool response for status: "error"
+- If status is "error": Log the error and return "ERROR: [error message from tool]" to parent agent and stop
+- If status is "success": Continue to Step 9
 
-Step 9: PASS TORCH TO RESUME CRITIC AGENT
-- Call resume_critic_agent for review
-- Critic will validate structure, fidelity, and effectiveness
-- Critic may call Writer again with feedback (iterations 2-5)
-- Return results from Critic
+Step 9: PASS TORCH TO RESUME CRITIC AGENT WITH EXPLICIT PARAMETERS
+- Call resume_critic_agent with explicit parameters:
+  * iteration_number: Current iteration number string ("01" through "05")
+  * resume_candidate_json: The candidate JSON from Step 8
+  * json_resume: Original resume (for fidelity checking)
+  * json_job_description: Job description (for context)
+  * quality_matches: Quality matches (for validation)
+  * resume: The original resume text (for fidelity/fabrication checks)
+  * job_description: The original job description text (for context)
+- Resume Critic Agent will review the candidate and either:
+  * Finalize it (if no issues) and return optimized resume
+  * Call Resume Writing Agent again with feedback (iterations 2-5)
+- Check the response for the keyword "ERROR:"
+- If "ERROR:" is present:
+  * Log the error
+  * Prepend agent name to create error chain
+  * Return "ERROR: [ResumeWriting] -> [error from Resume Critic Agent]"
+  * Stop processing
+- If "ERROR:" is not present: Return the results from Resume Critic Agent
 
 ERROR HANDLING:
-Return detailed error messages for:
-- Missing json_resume, json_job_description, or quality_matches
-- Malformed JSON structures
-- Invalid iteration numbers (> 5)
-- Missing previous candidate when expected (iterations 2-5)
-- Missing critic_issues when expected
-- Structure validation failures
-- Session state save failures
-- Torch-passing failures
+This is a Coordinator Agent. Follow the ADK three-layer pattern:
 
-CRITICAL PRINCIPLES (GEN1):
+Parameter Validation:
+- If json_resume, json_job_description, quality_matches, resume, or job_description parameters are missing or empty:
+  * Log error
+  * Return "ERROR: [ResumeWriting] Missing required input parameters"
+  * Stop
+
+When using tools (save_resume_candidate_to_session):
+- Check tool response for status: "error"
+- If status is "error":
+  * Log error
+  * Return "ERROR: [ResumeWriting] {{error message from tool}}"
+  * Stop
+
+When calling sub-agents (resume_critic_agent):
+- Check sub-agent response for the keyword "ERROR:"
+- If "ERROR:" is found:
+  * Log error
+  * Prepend agent name to create error chain
+  * Return "ERROR: [ResumeWriting] -> {{error from child}}"
+  * Stop
+
+For validation errors during processing:
+- If malformed JSON structures: Log error, return "ERROR: [ResumeWriting] Invalid JSON structure in input data" to parent agent, and stop
+- If invalid iteration numbers (> 5): Log error, return "ERROR: [ResumeWriting] Invalid iteration number (maximum 5 iterations)" to parent agent, and stop
+- If structure validation fails: Log error, return "ERROR: [ResumeWriting] Resume structure validation failed" to parent agent, and stop
+
+Log all errors before returning them to parent agent.
+
+CRITICAL PRINCIPLES:
 1. HIGH FIDELITY: Preserve ALL original wording (no rephrasing)
 2. NO FABRICATION: Never add achievements, experiences, or qualifications not in original
 3. STRUCTURE PRESERVATION: Follow json_resume structure exactly
@@ -234,7 +281,7 @@ CRITICAL PRINCIPLES (GEN1):
 6. JOB_ID IMMUTABLE: Never change job_id sequence (job_001 = oldest always)
 7. CHRONOLOGICAL ORDER: Jobs newest first, oldest last (always)
 
-WHAT NOT TO DO (GEN1):
+WHAT NOT TO DO:
 - DO NOT rephrase achievement text
 - DO NOT add achievements
 - DO NOT modify job summaries
@@ -249,7 +296,6 @@ Use json_resume from session state as your template. Match its structure exactly
 """,
         tools=[
             save_resume_candidate_to_session,
-            AgentTool(agent=resume_critic_agent),
         ],
     )
 

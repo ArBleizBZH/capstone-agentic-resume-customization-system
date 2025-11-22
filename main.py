@@ -1,6 +1,6 @@
 """Main entry point for the Resume Optimization System.
 
-Sprint 002: Enhanced observability with metrics tracking and summary display.
+Sprint 012: End-to-end integration test with full workflow execution.
 Based on Day 1a, Day 3a, and Day 4a notebook patterns.
 """
 
@@ -59,10 +59,10 @@ def print_metrics_summary(metrics):
 
 
 async def main():
-    """Main function to test the resume optimization system."""
+    """Main function to run the complete resume optimization workflow."""
 
     print("\n" + "="*60)
-    print("Resume Optimization System - Sprint 002 Test")
+    print("Resume Optimization System - Sprint 012 E2E Test")
     print("="*60 + "\n")
 
     try:
@@ -70,17 +70,21 @@ async def main():
         print("Creating runner...")
         runner, metrics_plugin = create_runner()
 
-        # Basic test: Simple query to verify agent instantiation
-        print("\nRunning basic test query...\n")
+        # Full workflow test with actual input files
+        print("\nRunning full workflow with input files...")
+        print("  Resume: resume.md (via MCP)")
+        print("  Job Description: job_description.md (via MCP)\n")
 
         response = await runner.run_debug(
-            "Hello! Please confirm you are the Job Application Agent and ready to help with resume customization."
+            "Please optimize my resume for this job application. "
+            "Resume file: resume.md. "
+            "Job description file: job_description.md."
         )
 
         print("\n" + "="*60)
-        print("Sprint 002 Test Complete!")
+        print("Sprint 012 E2E Test Complete!")
         print("="*60)
-        print("\nAll agents successfully instantiated and responding.")
+        print("\nWorkflow executed.")
         print("Logs saved to:")
         print("  - logs/logger.log (main application log)")
         print("  - logs/web.log (web UI log)")
@@ -93,11 +97,11 @@ async def main():
         else:
             print("\nMetrics tracking disabled (production mode)")
 
-        print("\nNext steps: Sprint 003 - Job Application Agent + Ingest Agents")
-
     except Exception as e:
-        print(f"\nError during test: {e}")
+        print(f"\nError during workflow execution: {e}")
         print(f"Details: {type(e).__name__}")
+        import traceback
+        traceback.print_exc()
         raise
 
 

@@ -26,40 +26,13 @@ def create_app():
     """Create and configure the ADK App.
 
     Returns:
-        App: Configured application with root agent
+        tuple: (App, metrics_plugin or None)
+            - App: Configured application with root agent and plugins
+            - metrics_plugin: ResumeOptimizationMetricsPlugin instance if in development, None otherwise
     """
 
     # Create the root agent
     root_agent = create_job_application_agent()
-
-    # Create the App
-    app = App(
-        name="resume_optimizer_app",
-        root_agent=root_agent,
-        # Future: Add EventsCompactionConfig in Sprint 002 if needed
-    )
-
-    return app
-
-
-def create_runner():
-    """Create and configure the Runner with session service and plugins.
-
-    Loads plugins based on environment:
-    - development: LoggingPlugin + ResumeOptimizationMetricsPlugin
-    - production: LoggingPlugin only
-
-    Returns:
-        tuple: (Runner, metrics_plugin or None)
-            - Runner: Configured runner with InMemorySessionService
-            - metrics_plugin: ResumeOptimizationMetricsPlugin instance if in development, None otherwise
-    """
-
-    # Create the app
-    app = create_app()
-
-    # Create session service (InMemorySessionService for gen1)
-    session_service = InMemorySessionService()
 
     # Configure plugins based on environment
     plugins = [LoggingPlugin()]  # Always include base logging
@@ -73,11 +46,37 @@ def create_runner():
     else:
         print(f"Production plugins loaded: LoggingPlugin")
 
-    # Create runner with plugins
+    # Create the App with plugins
+    app = App(
+        name="resume_optimizer_app",
+        root_agent=root_agent,
+        plugins=plugins,
+    )
+
+    return app, metrics_plugin
+
+
+def create_runner():
+    """Create and configure the Runner with session service.
+
+    Plugins are configured in the app.
+
+    Returns:
+        tuple: (Runner, metrics_plugin or None)
+            - Runner: Configured runner with InMemorySessionService
+            - metrics_plugin: ResumeOptimizationMetricsPlugin instance if in development, None otherwise
+    """
+
+    # Create the app with plugins
+    app, metrics_plugin = create_app()
+
+    # Create session service (InMemorySessionService for gen1)
+    session_service = InMemorySessionService()
+
+    # Create runner
     runner = Runner(
         app=app,
         session_service=session_service,
-        plugins=plugins,
     )
 
     print(f"Runner configured ({ENV} mode) with InMemorySessionService")

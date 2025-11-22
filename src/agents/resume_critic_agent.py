@@ -1,7 +1,6 @@
 """Resume Critic Agent - Evaluates resume quality and provides feedback.
 
 Based on Day 1a and Day 2a notebook patterns for LlmAgent with AgentTool.
-Sprint 009: Implements two-pass review (JSON + raw documents) and owns write-critique loop.
 """
 
 import json
@@ -9,6 +8,7 @@ from google.adk.agents import LlmAgent
 from google.adk.models.google_llm import Gemini
 from google.adk.tools import AgentTool
 from google.adk.tools.tool_context import ToolContext
+from google.genai import types
 from src.config.model_config import GEMINI_FLASH_MODEL, retry_config, GOOGLE_API_KEY
 
 
@@ -105,42 +105,52 @@ def save_optimized_resume_to_session(tool_context: ToolContext, resume_json: str
 def create_resume_critic_agent():
     """Create and return the Resume Critic Agent.
 
-    This agent performs two-pass review (JSON + raw documents), owns the write-critique loop,
+    This agent performs two-pass review (JSON + original documents), owns the write-critique loop,
     and returns to Resume Refiner Agent when optimization is complete.
+
+    NOTE: Resume Writing Agent will be added to tools after creation to avoid circular dependency.
 
     Returns:
         LlmAgent: The configured Resume Critic Agent
     """
-
-    # Import Resume Writing Agent for iteration calls
-    from src.agents.resume_writing_agent import create_resume_writing_agent
-
-    resume_writing_agent = create_resume_writing_agent()
 
     agent = LlmAgent(
         name="resume_critic_agent",
         model=Gemini(
             model=GEMINI_FLASH_MODEL,
             retry_options=retry_config,
-            api_key=GOOGLE_API_KEY
+            api_key=GOOGLE_API_KEY,
+            generate_content_config=types.GenerateContentConfig(
+                tool_config=types.ToolConfig(
+                    function_calling_config=types.FunctionCallingConfig(
+                        mode=types.FunctionCallingConfigMode.ANY
+                    )
+                )
+            )
         ),
         description="Performs two-pass review to validate resume candidates and owns the write-critique loop.",
         instruction="""You are the Resume Critic Agent, responsible for validating resume candidates through two-pass review and owning the write-critique loop.
 
 TWO-PASS REVIEW PROCESS:
 - Pass 1: JSON review with structured data
-- Pass 2: Raw document review for disambiguation
+- Pass 2: document review for disambiguation
 
 WORKFLOW:
 
-Step 1: READ FROM SESSION STATE
-- Access tool_context.state["resume_candidate_XX"] for candidate to review
-- Access tool_context.state["json_resume"] for original structured resume
-- Access tool_context.state["json_job_description"] for job requirements
-- Access tool_context.state["quality_matches"] for validated matches
-- Access tool_context.state["resume"] for raw resume text
-- Access tool_context.state["job_description"] for raw job description text
-- If any key missing, return error immediately
+Step 1: RECEIVE AND VALIDATE INPUT PARAMETERS
+You will receive **seven** required parameters from the Resume Writing Agent:
+  * iteration_number: Current iteration string ("01" through "05")
+  * resume_candidate_json: The candidate to review
+  * json_resume: Original structured resume (for fidelity check)
+  * json_job_description: Job description (for context)
+  * quality_matches: Validated matches (for validation)
+  * resume: The original resume text (for fidelity and fabrication checks in Pass 2)
+  * job_description: The original job description text (for disambiguation in Pass 2)
+- Check if **all seven** parameters are present and non-empty
+- If any parameter is missing or empty:
+  * Log the error
+  * Return "ERROR: [ResumeCritic] Missing required input parameters"
+  * Stop processing
 
 Step 2: DETERMINE ITERATION NUMBER
 - Which candidate are you reviewing? (01, 02, 03, 04, or 05)
@@ -192,34 +202,34 @@ F. GENERAL ISSUES
 
 Create INITIAL ISSUES LIST from Pass 1 findings.
 
-Step 4: PASS 2 - RAW DOCUMENT REVIEW (Disambiguation)
-Read raw resume and job_description to validate and disambiguate:
+Step 4: PASS 2 - ORIGINAL DOCUMENT REVIEW (Disambiguation)
+Read resume and job_description to validate and disambiguate:
 
 A. TEXT FIDELITY VERIFICATION
    - For each achievement in resume_candidate_XX
-   - Search for exact text in raw resume
+   - Search for exact text in resume
    - Confirm no rephrasing occurred
    - Validate exact wording preserved
    - Issue if: Text was rephrased (critical fidelity violation)
 
 B. FABRICATION DETECTION
-   - Cross-reference ALL achievements with raw resume
-   - Verify certifications existed in raw original
+   - Cross-reference ALL achievements with resume
+   - Verify certifications existed in original
    - Confirm no content invented
-   - Search raw text for evidence of each item
-   - Issue if: Content not found in raw resume (critical fabrication)
+   - Search text for evidence of each item
+   - Issue if: Content not found in resume (critical fabrication)
 
 C. DISAMBIGUATION OF UNCERTAIN ISSUES
    - Review uncertain issues from Pass 1
-   - Use raw text to resolve ambiguity
+   - Use text to resolve ambiguity
    - Confirm or dismiss suspected violations
-   - Add context from raw documents
+   - Add context from documents
    - Update issues list accordingly
 
 D. GROUND TRUTH VALIDATION
-   - Raw documents are source of truth
-   - If conflict between JSON and raw, raw wins
-   - Use raw text to resolve edge cases
+   - Original ocuments are source of truth
+   - If conflict between JSON and raw, wins
+   - Use text to resolve edge cases
 
 ADJUST ISSUES LIST based on Pass 2 findings (add/remove/modify issues).
 
@@ -228,36 +238,71 @@ Step 5: DECISION LOGIC
 A. IF ISSUES LIST IS EMPTY (No problems found):
    - Set optimized_resume = current resume_candidate_XX
    - Convert to JSON string
-   - Call save_optimized_resume_to_session(tool_context, resume_json)
+   - Call save_optimized_resume_to_session with resume_json parameter only
+   - Note: ADK framework automatically provides tool_context - do not pass it explicitly
    - Workflow complete - return to Resume Refiner Agent
    - DO NOT call Resume Writing Agent
 
 B. IF ISSUES EXIST AND ITERATION < 5:
    - Convert issues list to JSON string
-   - Call save_critic_issues_to_session(tool_context, issues_json, iteration_number)
-   - Call resume_writing_agent with instruction:
-     "Read critic_issues_XX from session state for feedback on resume_candidate_XX"
-   - Writer will create next iteration
-   - Return results from Writer
+   - Call save_critic_issues_to_session with issues_json and iteration_number parameters only
+   - Note: ADK framework automatically provides tool_context - do not pass it explicitly
+   - Check the tool response for status: "error"
+   - If status is "error": Log error, return "ERROR: [ResumeCritic] {{error from tool}}", and stop
+   - Call resume_writing_agent with explicit parameters:
+     * json_resume (pass the original parameter received)
+     * json_job_description (pass the original parameter received)
+     * quality_matches (pass the original parameter received)
+     * resume (pass the original parameter received) 
+     * job_description (pass the original parameter received)
+   - Resume Writing Agent will read critic_issues from session state and create next iteration
+   - Check the response for the keyword "ERROR:"
+   - If "ERROR:" is present:
+     * Log the error
+     * Prepend agent name to create error chain
+     - Return "ERROR: [ResumeCritic] -> {{error from Resume Writing Agent}}"
+     * Stop processing
+   - If "ERROR:" is not present: Return the results from Resume Writing Agent
 
 C. IF MAX ITERATIONS REACHED (iteration = 5):
    - Even if issues exist, must finalize
    - Set optimized_resume = resume_candidate_05 (best effort)
    - Convert to JSON string
-   - Call save_optimized_resume_to_session(tool_context, resume_json)
+   - Call save_optimized_resume_to_session with resume_json parameter only
+   - Note: ADK framework automatically provides tool_context - do not pass it explicitly
    - Workflow complete - return to Resume Refiner Agent
    - DO NOT call Resume Writing Agent
 
 ERROR HANDLING:
-Return detailed error messages for:
-- Missing resume_candidate_XX in session state
-- Missing json_resume, json_job_description, or quality_matches
-- Missing raw resume or job_description
-- Malformed JSON structures
-- Invalid iteration numbers (> 5 or < 1)
-- Issues list serialization failures
-- Session state save failures
-- Agent call failures
+This is a Coordinator Agent (has tools AND calls sub-agent). Follow the ADK three-layer pattern:
+
+Parameter Validation:
+If iteration_number, resume_candidate_json, json_resume, json_job_description, quality_matches, resume, or job_description parameters are missing or empty:
+  * Log error
+  * Return "ERROR: [ResumeCritic] Missing required input parameters"
+  * Stop
+
+When using tools (save functions):
+- Check tool response for status: "error"
+- If status is "error":
+  * Log error
+  * Return "ERROR: [ResumeCritic] {{error message from tool}}"
+  * Stop
+
+When calling sub-agents (resume_writing_agent):
+- Check sub-agent response for the keyword "ERROR:"
+- If "ERROR:" is found:
+  * Log error
+  * Prepend agent name to create error chain
+  * Return "ERROR: [ResumeCritic] -> {{error from child}}"
+  * Stop
+
+For validation errors during processing:
+- If malformed JSON structures: Log error, return "ERROR: [ResumeCritic] Invalid JSON structure in input data" to parent agent, and stop
+- If invalid iteration numbers (> 5 or < 1): Log error, return "ERROR: [ResumeCritic] Invalid iteration number (must be 1-5)" to parent agent, and stop
+- If issues list serialization fails: Log error, return "ERROR: [ResumeCritic] Failed to serialize critic issues" to parent agent, and stop
+
+Log all errors before returning them to parent agent.
 
 ISSUES LIST STRUCTURE:
 Each issue should include:
@@ -287,16 +332,16 @@ ISSUE CATEGORIES:
 - missing_emphasis: Matches not highlighted
 
 CRITICAL PRINCIPLES:
-1. TWO-PASS REVIEW: Always perform both JSON and raw document review
+1. TWO-PASS REVIEW: Always perform both JSON and document review
 2. EMPTY ISSUES = FINALIZE: If no issues after full review, set optimized_resume
 3. MAX 5 ITERATIONS: Absolute limit, finalize even if issues remain
-4. RAW IS TRUTH: Raw documents are ground truth for disambiguation
-5. RETURN TO REFINER: When done, return to Resume Refiner Agent (not Writer)
-6. OWN THE LOOP: You control iteration decisions, not Writer
+4. ORIGINAL DOCUMENTS ARE TRUTH: The original documents are ground truth for disambiguation
+5. RETURN TO REFINER: When done, return to Resume Refiner Agent (not Resume Writing Agent)
+6. OWN THE LOOP: You control iteration decisions, not Resume Writing Agent
 
 WHAT TO WATCH FOR:
-- Text rephrasing (compare raw resume exactly)
-- Fabricated achievements (not in raw resume)
+- Text rephrasing (compare resume exactly)
+- Fabricated achievements (not in resume)
 - Irrelevant certifications not pruned
 - Relevant achievements buried in list
 - Structure violations
@@ -305,7 +350,6 @@ WHAT TO WATCH FOR:
         tools=[
             save_critic_issues_to_session,
             save_optimized_resume_to_session,
-            AgentTool(agent=resume_writing_agent),
         ],
     )
 

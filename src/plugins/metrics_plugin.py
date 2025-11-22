@@ -146,16 +146,13 @@ class ResumeOptimizationMetricsPlugin(BasePlugin):
         self.total_llm_calls += 1
         logging.debug(f"[Metrics] LLM call #{self.total_llm_calls}")
 
-    async def after_tool_callback(
-        self, *, callback_context: CallbackContext, llm_request: LlmRequest
-    ) -> None:
+    async def after_tool_callback(self, **kwargs) -> None:
         """Count tool uses across all agents.
 
         Called after a tool is used. Tracks total tool invocations.
 
         Args:
-            callback_context: Context information about the callback
-            llm_request: The LLM request that triggered the tool use
+            **kwargs: Keyword arguments which may include callback_context, tool, etc.
         """
         self.total_tool_calls += 1
         logging.debug(f"[Metrics] Tool call #{self.total_tool_calls}")
