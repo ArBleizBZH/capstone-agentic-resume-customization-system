@@ -123,7 +123,7 @@ def create_resume_critic_agent():
             generate_content_config=types.GenerateContentConfig(
                 tool_config=types.ToolConfig(
                     function_calling_config=types.FunctionCallingConfig(
-                        mode=types.FunctionCallingConfigMode.ANY
+                        mode=types.FunctionCallingConfigMode.AUTO
                     )
                 )
             )
@@ -149,7 +149,7 @@ You will receive **seven** required parameters from the Resume Writing Agent:
 - Check if **all seven** parameters are present and non-empty
 - If any parameter is missing or empty:
   * Log the error
-  * Return "ERROR: [ResumeCritic] Missing required input parameters"
+  * Return "ERROR: [resume_critic_agent] Missing required input parameters"
   * Stop processing
 
 Step 2: DETERMINE ITERATION NUMBER
@@ -240,7 +240,8 @@ A. IF ISSUES LIST IS EMPTY (No problems found):
    - Convert to JSON string
    - Call save_optimized_resume_to_session with resume_json parameter only
    - Note: ADK framework automatically provides tool_context - do not pass it explicitly
-   - Workflow complete - return to Resume Refiner Agent
+   - **CRITICAL**: After successful save, you MUST generate a final text response
+   - **DO NOT RETURN None** - return the optimized resume markdown to parent
    - DO NOT call Resume Writing Agent
 
 B. IF ISSUES EXIST AND ITERATION < 5:
@@ -248,7 +249,7 @@ B. IF ISSUES EXIST AND ITERATION < 5:
    - Call save_critic_issues_to_session with issues_json and iteration_number parameters only
    - Note: ADK framework automatically provides tool_context - do not pass it explicitly
    - Check the tool response for status: "error"
-   - If status is "error": Log error, return "ERROR: [ResumeCritic] {{error from tool}}", and stop
+   - If status is "error": Log error, return "ERROR: [resume_critic_agent] <INSERT ERROR MESSAGE FROM TOOL>", and stop
    - Call resume_writing_agent with explicit parameters:
      * json_resume (pass the original parameter received)
      * json_job_description (pass the original parameter received)
@@ -260,9 +261,11 @@ B. IF ISSUES EXIST AND ITERATION < 5:
    - If "ERROR:" is present:
      * Log the error
      * Prepend agent name to create error chain
-     - Return "ERROR: [ResumeCritic] -> {{error from Resume Writing Agent}}"
+     - Return "ERROR: [resume_critic_agent] -> <INSERT ERROR MESSAGE FROM RESUME WRITING AGENT>"
      * Stop processing
-   - If "ERROR:" is not present: Return the results from Resume Writing Agent
+   - **CRITICAL**: After writing agent completes, you MUST generate a final text response
+   - **DO NOT RETURN None** - return the complete response from Resume Writing Agent
+   - If Resume Writing Agent returns None, report: "ERROR: [resume_critic_agent] -> Resume Writing Agent returned no content"
 
 C. IF MAX ITERATIONS REACHED (iteration = 5):
    - Even if issues exist, must finalize
@@ -270,7 +273,8 @@ C. IF MAX ITERATIONS REACHED (iteration = 5):
    - Convert to JSON string
    - Call save_optimized_resume_to_session with resume_json parameter only
    - Note: ADK framework automatically provides tool_context - do not pass it explicitly
-   - Workflow complete - return to Resume Refiner Agent
+    - **CRITICAL**: After successful save, you MUST generate a final text response
+   - **DO NOT RETURN None** - return the optimized resume markdown to parent
    - DO NOT call Resume Writing Agent
 
 ERROR HANDLING:
@@ -279,14 +283,14 @@ This is a Coordinator Agent (has tools AND calls sub-agent). Follow the ADK thre
 Parameter Validation:
 If iteration_number, resume_candidate_json, json_resume, json_job_description, quality_matches, resume, or job_description parameters are missing or empty:
   * Log error
-  * Return "ERROR: [ResumeCritic] Missing required input parameters"
+  * Return "ERROR: [resume_critic_agent] Missing required input parameters"
   * Stop
 
 When using tools (save functions):
 - Check tool response for status: "error"
 - If status is "error":
   * Log error
-  * Return "ERROR: [ResumeCritic] {{error message from tool}}"
+  * Return "ERROR: [resume_critic_agent] <INSERT ERROR MESSAGE FROM TOOL>"
   * Stop
 
 When calling sub-agents (resume_writing_agent):
@@ -294,13 +298,13 @@ When calling sub-agents (resume_writing_agent):
 - If "ERROR:" is found:
   * Log error
   * Prepend agent name to create error chain
-  * Return "ERROR: [ResumeCritic] -> {{error from child}}"
+  * Return "ERROR: [resume_critic_agent] -> <INSERT ERROR MESSAGE FROM CHILD>"
   * Stop
 
 For validation errors during processing:
-- If malformed JSON structures: Log error, return "ERROR: [ResumeCritic] Invalid JSON structure in input data" to parent agent, and stop
-- If invalid iteration numbers (> 5 or < 1): Log error, return "ERROR: [ResumeCritic] Invalid iteration number (must be 1-5)" to parent agent, and stop
-- If issues list serialization fails: Log error, return "ERROR: [ResumeCritic] Failed to serialize critic issues" to parent agent, and stop
+- If malformed JSON structures: Log error, return "ERROR: [resume_critic_agent] Invalid JSON structure in input data" to parent agent, and stop
+- If invalid iteration numbers (> 5 or < 1): Log error, return "ERROR: [resume_critic_agent] Invalid iteration number (must be 1-5)" to parent agent, and stop
+- If issues list serialization fails: Log error, return "ERROR: [resume_critic_agent] Failed to serialize critic issues" to parent agent, and stop
 
 Log all errors before returning them to parent agent.
 

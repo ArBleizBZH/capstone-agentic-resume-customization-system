@@ -72,7 +72,7 @@ When asked to load documents:
 Call the read_file tool to load BOTH files in parallel:
    - resume.md
    - job_description.md
-If either file read fails, log the error and return "ERROR: {{ApplicationDocumentsAgent}} {{file read error message}}" to the parent agent and stop.
+If either file read fails, log the error and return "ERROR: [application_documents_agent] <INSERT FULL FILE READ ERROR MESSAGE HERE>" to the parent agent and stop.
 
 **STEP 2: INGEST RESUME (REQUIRED - DO NOT SKIP)**
 Once you have the full text content of 'resume.md', you MUST immediately call the resume_ingest_agent.
@@ -81,8 +81,8 @@ Once you have the full text content of 'resume.md', you MUST immediately call th
 
 **STEP 3: CHECK RESUME INGEST RESPONSE**
 Check the response from resume_ingest_agent for the keyword "ERROR:"
-   - If "ERROR:" is present: Log error and return "ERROR: {{ApplicationDocumentsAgent}} -> {{full error message}}" to parent agent and stop
-   - If "ERROR:" is not present: Extract the JSON from the response by locating the "RESUME_JSON_CONTENT:" keyword and extracting everything after it
+   - If "ERROR:" is present: Log error and return "ERROR: [application_documents_agent] -> <INSERT FULL ERROR MESSAGE FROM resume_ingest_agent>" to parent agent and stop
+   - If "ERROR:" is not present: Extract the JSON from the response by locating the "JSON_RESUME:" keyword and extracting everything after it
 
 **STEP 4: INGEST JOB DESCRIPTION (REQUIRED - DO NOT SKIP)**
 Once you have the full text content of 'job_description.md', you MUST immediately call the job_description_ingest_agent.
@@ -91,8 +91,8 @@ Once you have the full text content of 'job_description.md', you MUST immediatel
 
 **STEP 5: CHECK JD INGEST RESPONSE**
 Check the response from job_description_ingest_agent for the keyword "ERROR:"
-   - If "ERROR:" is present: Log error and return "ERROR: {{ApplicationDocumentsAgent}} -> {{full error message}}" to parent agent and stop
-   - If "ERROR:" is not present: Extract the JSON from the response by locating the "JOB_DESCRIPTION_JSON_CONTENT:" keyword and extracting everything after it
+   - If "ERROR:" is present: Log error and return "ERROR: [application_documents_agent] -> <INSERT FULL ERROR MESSAGE FROM job_description_ingest_agent>" to parent agent and stop
+   - If "ERROR:" is not present: Extract the JSON from the response by locating the "JSON_JOB_DESCRIPTION:" keyword and extracting everything after it
 
 **STEP 6: RETURN BOTH JSON OBJECTS (FINAL STEP)**
 RETURN BOTH extracted JSON objects in your final response. This is the final step - you MUST complete all previous steps before reaching here.
@@ -103,10 +103,10 @@ This is a Coordinator Agent. Follow the ADK three-layer pattern:
 When calling sub-agents (ingest agents):
 - Check each sub-agent response for the keyword "ERROR:"
 - If "ERROR:" is found: Log error, immediately stop processing
-- Return "ERROR: {{ApplicationDocumentsAgent}} -> {{error message}}" to parent agent
+- Return "ERROR: [application_documents_agent] -> <INSERT FULL ERROR MESSAGE HERE>" to parent agent
 
 When using tools (read_file):
-- If tool fails: Log error and return "ERROR: {{ApplicationDocumentsAgent}} {{error description}}" to parent agent
+- If tool fails: Log error and return "ERROR: [application_documents_agent] <INSERT FULL ERROR DESCRIPTION HERE>" to parent agent
 
 Log all errors before returning them to parent agent.
 
@@ -122,11 +122,11 @@ After all tools complete successfully, you MUST return BOTH JSON objects in your
 Use this EXACT format:
 "SUCCESS: Both documents have been loaded and processed.
 
-RESUME_JSON:
-{{the complete resume JSON here}}
+JSON_RESUME:
+<INSERT THE COMPLETE JSON RESUME HERE>
 
-JOB_DESCRIPTION_JSON:
-{{the complete job description JSON here}}"
+JSON_JOB_DESCRIPTION:
+<INSERT THE COMPLETE JSON JOB DESCRIPTION HERE>"
 
 This format is CRITICAL - the parent agent will extract these JSON objects from your response.
 Do NOT summarize or truncate the JSON - return the COMPLETE JSON objects.

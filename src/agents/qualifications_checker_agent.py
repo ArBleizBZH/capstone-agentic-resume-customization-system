@@ -121,7 +121,7 @@ def create_qualifications_checker_agent():
             generate_content_config=types.GenerateContentConfig(
                 tool_config=types.ToolConfig(
                     function_calling_config=types.FunctionCallingConfig(
-                        mode=types.FunctionCallingConfigMode.ANY
+                        mode=types.FunctionCallingConfigMode.AUTO
                     )
                 )
             )
@@ -141,7 +141,7 @@ Step 1: RECEIVE AND VALIDATE INPUT PARAMETERS
 - Check if all five parameters are present and non-empty
 - If any parameter is missing or empty:
   * Log the error
-  * Return "ERROR: {{QualificationsChecker}} Missing required input parameters"
+  * Return "ERROR: [qualifications_checker_agent] Missing required input parameters"
   * Stop processing
 
 Step 2: VERIFY AND REFINE MATCHES
@@ -156,13 +156,13 @@ Step 3: SAVE QUALITY_MATCHES TO SESSION STATE
 - Convert quality_matches list to JSON string
 - Call save_quality_matches_to_session with matches_json parameter only
 - Note: ADK framework automatically provides tool_context - do not pass it explicitly
-- If the tool response indicates "error": Log the error and return "ERROR: {{QualificationsChecker}} {{error message from tool}}" to the parent agent, then STOP.
+- If the tool response indicates "error": Log the error and return "ERROR: [qualifications_checker_agent] <INSERT ERROR MESSAGE FROM TOOL>" to the parent agent, then STOP.
 
 Step 4: SAVE POSSIBLE_QUALITY_MATCHES TO SESSION STATE
 - Convert the final, empty possible_matches list (after verification and discarding) to the JSON string "[]"
 - Call save_possible_matches_to_session with "[]" parameter only
 - Note: ADK framework automatically provides tool_context - do not pass it explicitly
-- If the tool response indicates "error": Log the error and return "ERROR: {{QualificationsChecker}} {{error message from tool}}" to the parent agent, then STOP.
+- If the tool response indicates "error": Log the error and return "ERROR: [qualifications_checker_agent] <INSERT ERROR MESSAGE FROM TOOL>" to the parent agent, then STOP.
 - If the tool response is "success": DO NOT STOP. Immediately proceed to Step 5.
 
 Step 5: CALL RESUME WRITING AGENT AND RETURN ITS RESPONSE
@@ -172,13 +172,16 @@ Step 5: CALL RESUME WRITING AGENT AND RETURN ITS RESPONSE
   * resume: Pass the original 'resume' text received as an input parameter in Step 1
   * quality_matches: Pass the original parameter received from parent
 
-CRITICAL FINAL STEP:
-After calling resume_writing_agent, you MUST generate a text response that contains the COMPLETE output from that agent.
+CRITICAL FINAL STEP - MANDATORY TEXT RESPONSE:
+After calling resume_writing_agent, you MUST generate a text response.
+**DO NOT RETURN None** - this will break the workflow.
 **DO NOT STOP** after the tool call without generating this response.
-**DO NOT** generate your own summary or analysis.
-**RETURN EXACTLY** what the resume_writing_agent returned to you.
 
-Your response format: Simply echo/relay the complete text response you received from resume_writing_agent.
+Your final response MUST contain the EXACT, COMPLETE text returned by `resume_writing_agent`.
+Simply echo/relay the writing agent's response - do not summarize, modify, or add your own text.
+
+If `resume_writing_agent` returns None or empty content, immediately report:
+"ERROR: [qualifications_checker_agent] -> Resume Writing Agent returned no content"
 
 ERROR HANDLING:
 This is a Coordinator Agent. Follow the ADK three-layer pattern:
@@ -186,14 +189,14 @@ This is a Coordinator Agent. Follow the ADK three-layer pattern:
 Parameter Validation:
 - If quality_matches_json, possible_matches_json, json_resume, json_job_description, or resume parameters are missing or empty:
   * Log error
-  * Return "ERROR: {{QualificationsChecker}} Missing required input parameters"
+  * Return "ERROR: [qualifications_checker_agent] Missing required input parameters"
   * Stop
 
 When using tools (save functions):
 - Check tool response for status: "error"
 - If status is "error":
   * Log error
-  * Return "ERROR: {{QualificationsChecker}} {{error message from tool}}"
+  * Return "ERROR: [qualifications_checker_agent] <INSERT ERROR MESSAGE FROM TOOL>"
   * Stop
 
 When calling sub-agents (resume_writing_agent):
@@ -201,19 +204,19 @@ When calling sub-agents (resume_writing_agent):
 - If "ERROR:" is found:
   * Log error
   * Prepend agent name to create error chain
-  * Return "ERROR: {{QualificationsChecker}} -> {{error from child}}"
+  * Return "ERROR: [qualifications_checker_agent] -> <INSERT ERROR FROM CHILD AGENT>"
   * Stop
 
 For validation errors during processing:
-- If malformed JSON structures: Log error, return "ERROR: {{QualificationsChecker}} Invalid JSON structure in input data" to parent agent, and stop
-- If verification logic fails: Log error, return "ERROR: {{QualificationsChecker}} Verification process failed" to parent agent, and stop
+- If malformed JSON structures: Log error, return "ERROR: [qualifications_checker_agent] Invalid JSON structure in input data" to parent agent, and stop
+- If verification logic fails: Log error, return "ERROR: [qualifications_checker_agent] Verification process failed" to parent agent, and stop
 
 Log all errors before returning them to parent agent.
 
 CRITICAL PRINCIPLES:
 1. VERIFICATION COORDINATION: You receive preliminary matches from Qualifications Matching Agent, execute the verification logic, save the FINAL match lists, and then delegate to the Resume Writing Agent.
 2. SEQUENTIAL EXECUTION: Complete all save operations before calling resume_writing_agent
-3. RETURN WRITING AGENT OUTPUT: Your final output is the resume_writing_agent's response
+3. RETURN WRITING AGENT OUTPUT: Your final output is the resume_writing_agent's response - DO NOT RETURN None
 4. NO PREMATURE STOPPING: Do not return None after tool calls - continue to next step
 """,
         tools=[

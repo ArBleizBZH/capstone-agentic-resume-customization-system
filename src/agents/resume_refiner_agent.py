@@ -4,6 +4,7 @@ Based on Day 2a and Day 5a notebook patterns for LlmAgent with AgentTool.
 Coordinates sequential workflow and write-critique loop.
 """
 
+from google.genai import types
 from google.adk.agents import LlmAgent
 from google.adk.models.google_llm import Gemini
 from google.adk.tools import AgentTool
@@ -30,7 +31,14 @@ def create_resume_refiner_agent():
         model=Gemini(
             model=GEMINI_FLASH_MODEL,
             retry_options=retry_config,
-            api_key=GOOGLE_API_KEY
+            api_key=GOOGLE_API_KEY,
+            generate_content_config=types.GenerateContentConfig(
+                tool_config=types.ToolConfig(
+                    function_calling_config=types.FunctionCallingConfig(
+                        mode=types.FunctionCallingConfigMode.AUTO
+                    )
+                )
+            )
         ),
         description="Lightweight orchestrator that initiates the resume optimization workflow by delegating to the qualifications matching process.",
         instruction="""You are the Resume Refiner Agent, a lightweight second-tier orchestrator responsible for initiating the resume optimization workflow.
@@ -49,7 +57,7 @@ Step 0: RECEIVE AND VALIDATE INPUT PARAMETERS
 - Check if all four parameters are present and non-empty
 - If either parameter is missing or empty:
   * Log the error
-  * Return "ERROR: [ResumeRefiner] Missing required input JSON data"
+  * Return "ERROR: [resume_refiner_agent] Missing required input JSON data"
   * Stop processing
 
 Step 1: DELEGATE TO QUALIFICATIONS MATCHING AGENT
@@ -67,15 +75,25 @@ Step 2: CHECK FOR ERRORS AND CHAIN THEM
 - Check the response from qualifications_matching_agent for the keyword "ERROR:"
 - If "ERROR:" is present:
   * Log the error
-  * Prepend your agent name to create error chain
-  * Return "ERROR: [ResumeRefiner] -> {{error message from child}}"
-  * Stop processing
-- If "ERROR:" is not present: Continue to Step 3
+  * Prepend agent name to create error chain
+  * Return "ERROR: [resume_refiner_agent] -> <INSERT ERROR MESSAGE FROM CHILD>"
+  * Stop
 
 Step 3: RETURN FINAL OPTIMIZED RESUME
-- After the workflow completes successfully, return the final optimized resume (markdown string) to the Job Application Agent
-- The workflow chain handles all intermediate steps through torch-passing
-- No additional processing needed
+
+CRITICAL FINAL RESPONSE:
+After qualifications_matching_agent completes, you MUST generate a final text response.
+**DO NOT RETURN None** or empty content - this will break the workflow.
+**DO NOT STOP** after the matching agent call without generating this response.
+
+Your final response MUST contain the EXACT, COMPLETE text returned by `qualifications_matching_agent`.
+Simply echo/relay the matching agent's response - do not summarize or modify it.
+
+If `qualifications_matching_agent` returns None or empty content, immediately report:
+"ERROR: [resume_refiner_agent] -> Qualifications Matching Agent returned no content"
+
+After the workflow completes successfully, return the final optimized resume (markdown string) to the Job Application Agent.
+The optimized resume will have been created through the write-critique loop managed by the qualifications checker, writing, and critic agents.
 
 ERROR HANDLING:
 This is a Coordinator Agent. Follow the ADK three-layer pattern:
@@ -83,7 +101,7 @@ This is a Coordinator Agent. Follow the ADK three-layer pattern:
 Parameter Validation:
 - If json_resume, or json_job_description, or resume, or job_description parameters are missing or empty:
   * Log error
-  * Return "ERROR: [ResumeRefiner] Missing required input JSON data"
+  * Return "ERROR: [resume_refiner_agent] Missing required input JSON data"
   * Stop
 
 When calling sub-agents (qualifications_matching_agent):
@@ -91,7 +109,7 @@ When calling sub-agents (qualifications_matching_agent):
 - If "ERROR:" is found:
   * Log error
   * Prepend agent name to create error chain
-  * Return "ERROR: [ResumeRefiner] -> {{error from child}}"
+  * Return "ERROR: [resume_refiner_agent] -> <INSERT ERROR MESSAGE FROM CHILD>"
   * Stop
 
 Log all errors before returning them to parent agent.

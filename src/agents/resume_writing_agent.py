@@ -84,7 +84,7 @@ def create_resume_writing_agent():
             generate_content_config=types.GenerateContentConfig(
                 tool_config=types.ToolConfig(
                     function_calling_config=types.FunctionCallingConfig(
-                        mode=types.FunctionCallingConfigMode.ANY
+                        mode=types.FunctionCallingConfigMode.AUTO
                     )
                 )
             )
@@ -109,7 +109,7 @@ Step 1: RECEIVE AND VALIDATE INPUT PARAMETERS
 - Check if all five parameters are present and non-empty
 - If any parameter is missing or empty:
   * Log the error
-  * Return "ERROR: [ResumeWriting] Missing required input parameters"
+  * Return "ERROR: [resume_writing_agent] Missing required input parameters"
   * Stop processing
 
 Step 2: DETERMINE ITERATION NUMBER
@@ -218,7 +218,7 @@ Step 8: SAVE TO SESSION STATE
 - Call save_resume_candidate_to_session with candidate_json and iteration_number parameters only
 - Note: ADK framework automatically provides tool_context - do not pass it explicitly
 - Check the tool response for status: "error"
-- If status is "error": Log the error and return "ERROR: [error message from tool]" to parent agent and stop
+- If status is "error": Log the error and return "ERROR: [resume_writing_agent] -> <INSERT ERROR MESSAGE FROM TOOL>" to parent agent and stop
 - If status is "success": Continue to Step 9
 
 Step 9: PASS TORCH TO RESUME CRITIC AGENT WITH EXPLICIT PARAMETERS
@@ -237,9 +237,19 @@ Step 9: PASS TORCH TO RESUME CRITIC AGENT WITH EXPLICIT PARAMETERS
 - If "ERROR:" is present:
   * Log the error
   * Prepend agent name to create error chain
-  * Return "ERROR: [ResumeWriting] -> [error from Resume Critic Agent]"
+  * Return "ERROR: [resume_writing_agent] -> <INSERT ERROR MESSAGE FROM RESUME CRITIC AGENT>"
   * Stop processing
-- If "ERROR:" is not present: Return the results from Resume Critic Agent
+
+CRITICAL FINAL RESPONSE:
+After calling resume_critic_agent, you MUST generate a final text response.
+**DO NOT RETURN None** - this will break the workflow.
+**DO NOT STOP** after the critic call without generating this response.
+
+Your final response MUST contain the EXACT, COMPLETE text returned by `resume_critic_agent`.
+Simply echo/relay the critic's response - do not summarize or modify it.
+
+If `resume_critic_agent` returns None or empty content, immediately report:
+"ERROR: [resume_writing_agent] -> Resume Critic Agent returned no content"
 
 ERROR HANDLING:
 This is a Coordinator Agent. Follow the ADK three-layer pattern:
@@ -247,14 +257,14 @@ This is a Coordinator Agent. Follow the ADK three-layer pattern:
 Parameter Validation:
 - If json_resume, json_job_description, quality_matches, resume, or job_description parameters are missing or empty:
   * Log error
-  * Return "ERROR: [ResumeWriting] Missing required input parameters"
+  * Return "ERROR: [resume_writing_agent] Missing required input parameters"
   * Stop
 
 When using tools (save_resume_candidate_to_session):
 - Check tool response for status: "error"
 - If status is "error":
   * Log error
-  * Return "ERROR: [ResumeWriting] {{error message from tool}}"
+  * Return "ERROR: [resume_writing_agent] <INSERT ERROR MESSAGE FROM TOOL>"
   * Stop
 
 When calling sub-agents (resume_critic_agent):
@@ -262,13 +272,13 @@ When calling sub-agents (resume_critic_agent):
 - If "ERROR:" is found:
   * Log error
   * Prepend agent name to create error chain
-  * Return "ERROR: [ResumeWriting] -> {{error from child}}"
+  * Return "ERROR: [resume_writing_agent] -> <INSERT ERROR MESSAGE FROM CHILD>"
   * Stop
 
 For validation errors during processing:
-- If malformed JSON structures: Log error, return "ERROR: [ResumeWriting] Invalid JSON structure in input data" to parent agent, and stop
-- If invalid iteration numbers (> 5): Log error, return "ERROR: [ResumeWriting] Invalid iteration number (maximum 5 iterations)" to parent agent, and stop
-- If structure validation fails: Log error, return "ERROR: [ResumeWriting] Resume structure validation failed" to parent agent, and stop
+- If malformed JSON structures: Log error, return "ERROR: [resume_writing_agent] Invalid JSON structure in input data" to parent agent, and stop
+- If invalid iteration numbers (> 5): Log error, return "ERROR: [resume_writing_agent] Invalid iteration number (maximum 5 iterations)" to parent agent, and stop
+- If structure validation fails: Log error, return "ERROR: [resume_writing_agent] Resume structure validation failed" to parent agent, and stop
 
 Log all errors before returning them to parent agent.
 
