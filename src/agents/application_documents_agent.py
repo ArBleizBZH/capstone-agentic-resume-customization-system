@@ -41,6 +41,7 @@ def create_application_documents_agent():
 
     # Create MCP filesystem toolset
     # Set cwd to the MCP directory so relative paths work correctly
+    # Use tool_filter to expose only canonical MCP tools per ADK documentation
     filesystem_mcp = McpToolset(
         connection_params=StdioConnectionParams(
             server_params=StdioServerParameters(
@@ -53,7 +54,8 @@ def create_application_documents_agent():
                 cwd=mcp_dir,  # Run from the MCP directory
             ),
             timeout=30,
-        )
+        ),
+        tool_filter=['read_file', 'list_directory']  # Only expose canonical MCP tools per ADK docs
     )
 
     agent = LlmAgent(
@@ -68,35 +70,40 @@ def create_application_documents_agent():
 
 When asked to load documents:
 
-**STEP 1: LOAD FILES**
-Call the read_file tool to load BOTH files in parallel:
-   - resume.md
-   - job_description.md
-If either file read fails, log the error and return "ERROR: [application_documents_agent] <INSERT FULL FILE READ ERROR MESSAGE HERE>" to the parent agent and stop.
+**STEP 1: LOAD RESUME FILE**
+Call the read_file tool with path="resume.md"
+Wait for the response and store the resume text content.
 
-**STEP 2: INGEST RESUME (REQUIRED - DO NOT SKIP)**
+**STEP 2: LOAD JOB DESCRIPTION FILE**
+Call the read_file tool with path="job_description.md"
+Wait for the response and store the job description text content.
+
+**STEP 3: CHECK FOR FILE READ ERRORS**
+If either file read failed, log the error and return "ERROR: [application_documents_agent] <INSERT FULL FILE READ ERROR MESSAGE HERE>" to the parent agent and stop.
+
+**STEP 4: INGEST RESUME (REQUIRED - DO NOT SKIP)**
 Once you have the full text content of 'resume.md', you MUST immediately call the resume_ingest_agent.
 - Call resume_ingest_agent with the following parameter:
   * resume: The complete text content from resume.md file
 - DO NOT proceed until you call this agent
 
-**STEP 3: CHECK RESUME INGEST RESPONSE**
+**STEP 5: CHECK RESUME INGEST RESPONSE**
 Check the response from resume_ingest_agent for the keyword "ERROR:"
    - If "ERROR:" is present: Log error and return "ERROR: [application_documents_agent] -> <INSERT FULL ERROR MESSAGE FROM resume_ingest_agent>" to parent agent and stop
    - If "ERROR:" is not present: Extract the JSON from the response by locating the "JSON_RESUME:" keyword and extracting everything after it
 
-**STEP 4: INGEST JOB DESCRIPTION (REQUIRED - DO NOT SKIP)**
+**STEP 6: INGEST JOB DESCRIPTION (REQUIRED - DO NOT SKIP)**
 Once you have the full text content of 'job_description.md', you MUST immediately call the job_description_ingest_agent.
 - Call job_description_ingest_agent with the following parameter:
   * job_description: The complete text content from job_description.md file
 - DO NOT proceed until you call this agent
 
-**STEP 5: CHECK JOB DESCRIPTION INGEST RESPONSE**
+**STEP 7: CHECK JOB DESCRIPTION INGEST RESPONSE**
 Check the response from job_description_ingest_agent for the keyword "ERROR:"
    - If "ERROR:" is present: Log error and return "ERROR: [application_documents_agent] -> <INSERT FULL ERROR MESSAGE FROM job_description_ingest_agent>" to parent agent and stop
    - If "ERROR:" is not present: Extract the JSON from the response by locating the "JSON_JOB_DESCRIPTION:" keyword and extracting everything after it
 
-**STEP 6: RETURN BOTH JSON OBJECTS (FINAL STEP)**
+**STEP 8: RETURN BOTH JSON OBJECTS (FINAL STEP)**
 RETURN BOTH extracted JSON objects in your final response. This is the final step - you MUST complete all previous steps before reaching here.
 
 ERROR HANDLING:
