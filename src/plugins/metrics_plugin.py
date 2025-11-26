@@ -9,12 +9,13 @@ Sprint 002: Full observability with complete context.
 import logging
 import traceback
 from datetime import datetime
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 
 from google.adk.plugins.base_plugin import BasePlugin
 from google.adk.agents.base_agent import BaseAgent
 from google.adk.agents.callback_context import CallbackContext
 from google.adk.models.llm_request import LlmRequest
+from google.adk.models.llm_response import LlmResponse
 
 
 class ResumeOptimizationMetricsPlugin(BasePlugin):
@@ -158,8 +159,12 @@ class ResumeOptimizationMetricsPlugin(BasePlugin):
         logging.debug(f"[Metrics] Tool call #{self.total_tool_calls}")
 
     async def on_model_error_callback(
-        self, *, callback_context: CallbackContext, error: Exception
-    ) -> None:
+        self,
+        *,
+        callback_context: CallbackContext,
+        llm_request: LlmRequest,
+        error: Exception,
+    ) -> Optional[LlmResponse]:
         """Capture errors with full context for debugging.
 
         Called when an error occurs in the model. Captures comprehensive error
@@ -167,7 +172,11 @@ class ResumeOptimizationMetricsPlugin(BasePlugin):
 
         Args:
             callback_context: Context information about the callback
+            llm_request: The LLM request that resulted in the error
             error: The exception that occurred
+
+        Returns:
+            Optional[LlmResponse]: None to use default error handling
         """
         error_info = {
             "timestamp": datetime.now().isoformat(),
@@ -189,6 +198,8 @@ Error Message: {error_info['error_message']}
 Traceback:
 {error_info['traceback']}
         """.strip())
+
+        return None
 
     def get_metrics_summary(self) -> Dict[str, Any]:
         """Get a comprehensive summary of all metrics.
