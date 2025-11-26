@@ -26,7 +26,7 @@ def save_json_job_description_to_session(tool_context: ToolContext, json_data: s
         clean_json = json_data.replace("```json", "").replace("```", "").strip()
 
         # DEBUG: Log JSON and attempt to parse
-        print(f"\n=== DEBUG JD JSON ===")
+        print(f"\n=== DEBUG JOB DESCRIPTION JSON ===")
         print(f"Full JSON length: {len(clean_json)}")
         print(f"First 500 chars: {clean_json[:500]}")
         print(f"Last 500 chars: {clean_json[-500:]}")

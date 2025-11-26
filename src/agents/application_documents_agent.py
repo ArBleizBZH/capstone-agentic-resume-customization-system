@@ -91,7 +91,7 @@ Once you have the full text content of 'job_description.md', you MUST immediatel
   * job_description: The complete text content from job_description.md file
 - DO NOT proceed until you call this agent
 
-**STEP 5: CHECK JD INGEST RESPONSE**
+**STEP 5: CHECK JOB DESCRIPTION INGEST RESPONSE**
 Check the response from job_description_ingest_agent for the keyword "ERROR:"
    - If "ERROR:" is present: Log error and return "ERROR: [application_documents_agent] -> <INSERT FULL ERROR MESSAGE FROM job_description_ingest_agent>" to parent agent and stop
    - If "ERROR:" is not present: Extract the JSON from the response by locating the "JSON_JOB_DESCRIPTION:" keyword and extracting everything after it

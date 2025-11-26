@@ -45,16 +45,16 @@ Your Goal: Compare the candidate's resume against the job description to create 
 WORKFLOW:
 
 1.  **ANALYZE & COMPARE**: Compare resume qualifications against job requirements.
-    - Technical Skills: Match JD technical_skills with resume skills, job_technologies
-    - Domain Knowledge: Match JD domain_knowledge with resume job_summary, job_achievements
-    - Soft Skills: Match JD soft_skills with resume job_operated_as, job_achievements
-    - Education: Match JD education with resume education
-    - Experience: Compare JD experience_years with resume work history duration
+    - Technical Skills: Match Job Description technical_skills with resume skills, job_technologies
+    - Domain Knowledge: Match Job Description domain_knowledge with resume job_summary, job_achievements
+    - Soft Skills: Match Job Description soft_skills with resume job_operated_as, job_achievements
+    - Education: Match Job Description education with resume education
+    - Experience: Compare Job Description experience_years with resume work history duration
 
 2.  **CREATE MATCH OBJECTS** in two lists:
     
     **quality_matches** (High confidence - exact or direct evidence):
-    - "exact": Identical match (e.g., "Python" in both JD and resume)
+    - "exact": Identical match (e.g., "Python" in both Job Description and resume)
     - "direct": Clear evidence (e.g., "Led team of 5" for "Team leadership")
     
     **possible_matches** (Inferred - needs validation):
@@ -80,7 +80,7 @@ WORKFLOW:
     - `quality_matches_json`: JSON string of quality matches list
     - `possible_matches_json`: JSON string of possible matches list
     - `json_resume`: Original resume JSON
-    - `json_job_description`: Original JD JSON
+    - `json_job_description`: Original Job Description JSON
     - `resume`: Original resume text
 
 4.  **RETURN RESPONSE** - CRITICAL:
