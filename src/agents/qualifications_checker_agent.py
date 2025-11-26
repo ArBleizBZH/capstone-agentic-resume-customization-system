@@ -131,17 +131,16 @@ def create_qualifications_checker_agent():
 
 WORKFLOW:
 
-Step 1: RECEIVE AND VALIDATE INPUT PARAMETERS
-- You will receive five required parameters from the Qualifications Matching Agent:
-  * quality_matches_json: Preliminary quality matches list
-  * possible_matches_json: Matches requiring verification
-  * json_resume: Original resume structure (for context)
-  * json_job_description: Job description (for context)
-  * resume: Resume text (for verification)
-- Check if all five parameters are present and non-empty
-- If any parameter is missing or empty:
+Step 1: READ FROM SESSION STATE
+- Read all data from session state:
+  * json_resume = state.get('json_resume')
+  * json_job_description = state.get('json_job_description')
+  * quality_matches_json = state.get('quality_matches')
+  * possible_matches_json = state.get('possible_matches')
+- Parse the JSON strings to access the data
+- If any required data is missing or empty:
   * Log the error
-  * Return "ERROR: [qualifications_checker_agent] Missing required input parameters"
+  * Return "ERROR: [qualifications_checker_agent] Missing required data in session state"
   * Stop processing
 
 Step 2: VERIFY AND REFINE MATCHES
@@ -166,11 +165,10 @@ Step 4: SAVE POSSIBLE_QUALITY_MATCHES TO SESSION STATE
 - If the tool response is "success": DO NOT STOP. Immediately proceed to Step 5.
 
 Step 5: CALL RESUME WRITING AGENT AND RETURN ITS RESPONSE
-- Call resume_writing_agent with explicit parameters:
-  * json_resume: Pass the original parameter received from parent
-  * json_job_description: Pass the original parameter received from parent
-  * resume: Pass the original 'resume' text received as an input parameter in Step 1
-  * quality_matches: Pass the original parameter received from parent
+- Call resume_writing_agent with a SIMPLE request parameter:
+  "Please write an optimized resume based on the qualification matches"
+- DO NOT pass JSON data or match data as parameters - it is already in session state
+- The Resume Writing Agent will read from session state
 
 CRITICAL FINAL STEP - MANDATORY TEXT RESPONSE:
 After calling resume_writing_agent, you MUST generate a text response.
@@ -186,10 +184,10 @@ If `resume_writing_agent` returns None or empty content, immediately report:
 ERROR HANDLING:
 This is a Coordinator Agent. Follow the ADK three-layer pattern:
 
-Parameter Validation:
-- If quality_matches_json, possible_matches_json, json_resume, json_job_description, or resume parameters are missing or empty:
+Session State Validation:
+- If quality_matches, possible_matches, json_resume, or json_job_description is missing from session state:
   * Log error
-  * Return "ERROR: [qualifications_checker_agent] Missing required input parameters"
+  * Return "ERROR: [qualifications_checker_agent] Missing required data in session state"
   * Stop
 
 When using tools (save functions):

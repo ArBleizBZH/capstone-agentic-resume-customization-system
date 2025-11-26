@@ -2,13 +2,74 @@
 
 Based on Day 2a and Day 5a notebook patterns for LlmAgent with AgentTool.
 Coordinates sequential workflow and write-critique loop.
+Implements session state pattern for data sharing between agents.
 """
 
+import json
 from google.genai import types
 from google.adk.agents import LlmAgent
 from google.adk.models.google_llm import Gemini
 from google.adk.tools import AgentTool
+from google.adk.tools.tool_context import ToolContext
 from src.config.model_config import GEMINI_FLASH_MODEL, retry_config, GOOGLE_API_KEY
+
+
+def save_resume_to_session(tool_context: ToolContext, json_resume: str) -> dict:
+    """Save resume JSON to session state.
+
+    Args:
+        tool_context: ADK tool context with state access
+        json_resume: JSON string containing structured resume data
+
+    Returns:
+        Dictionary with status and message
+    """
+    try:
+        resume_data = json.loads(json_resume)
+        tool_context.state['json_resume'] = json_resume
+        return {
+            "status": "success",
+            "message": "Resume JSON saved to session state"
+        }
+    except json.JSONDecodeError as e:
+        return {
+            "status": "error",
+            "message": f"Invalid resume JSON format: {str(e)}"
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Failed to save resume to session: {str(e)}"
+        }
+
+
+def save_job_description_to_session(tool_context: ToolContext, json_job_description: str) -> dict:
+    """Save job description JSON to session state.
+
+    Args:
+        tool_context: ADK tool context with state access
+        json_job_description: JSON string containing structured job description data
+
+    Returns:
+        Dictionary with status and message
+    """
+    try:
+        jd_data = json.loads(json_job_description)
+        tool_context.state['json_job_description'] = json_job_description
+        return {
+            "status": "success",
+            "message": "Job Description JSON saved to session state"
+        }
+    except json.JSONDecodeError as e:
+        return {
+            "status": "error",
+            "message": f"Invalid job description JSON format: {str(e)}"
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Failed to save job description to session: {str(e)}"
+        }
 
 
 def create_resume_refiner_agent():
@@ -44,7 +105,7 @@ def create_resume_refiner_agent():
         instruction="""You are the Resume Refiner Agent, a lightweight second-tier orchestrator responsible for initiating the resume optimization workflow.
 
 ROLE:
-Your sole purpose is to start the resume optimization process by delegating to the Qualifications Matching Agent, passing it the necessary documents via explicit parameters.
+Your sole purpose is to save documents to session state and start the resume optimization process by delegating to the Qualifications Matching Agent.
 
 WORKFLOW:
 
@@ -55,23 +116,31 @@ Step 0: RECEIVE AND VALIDATE INPUT PARAMETERS
   * resume: The original resume text (raw document)
   * job_description: The original job description text (raw document)
 - Check if all four parameters are present and non-empty
-- If either parameter is missing or empty:
+- If any parameter is missing or empty:
   * Log the error
   * Return "ERROR: [resume_refiner_agent] Missing required input JSON data"
   * Stop processing
 
-Step 1: DELEGATE TO QUALIFICATIONS MATCHING AGENT
-- Call qualifications_matching_agent with explicit parameters:
-  * Pass json_resume as parameter
-  * Pass json_job_description as parameter
-  * Pass resume as parameter
-  * Pass job_description as parameter
-- The Qualifications Matching Agent will analyze the JSON data
+Step 1: SAVE RESUME JSON TO SESSION STATE
+- Call save_resume_to_session with json_resume parameter only
+- Note: ADK framework automatically provides tool_context - do not pass it explicitly
+- If the tool response indicates "error": Log the error and return "ERROR: [resume_refiner_agent] <INSERT ERROR MESSAGE FROM TOOL>" to parent agent, then STOP
+
+Step 2: SAVE JOB DESCRIPTION JSON TO SESSION STATE
+- Call save_job_description_to_session with json_job_description parameter only
+- Note: ADK framework automatically provides tool_context - do not pass it explicitly
+- If the tool response indicates "error": Log the error and return "ERROR: [resume_refiner_agent] <INSERT ERROR MESSAGE FROM TOOL>" to parent agent, then STOP
+
+Step 3: DELEGATE TO QUALIFICATIONS MATCHING AGENT
+- Call qualifications_matching_agent with a SIMPLE request parameter:
+  "Please compare the resume against the job description and identify qualification matches"
+- DO NOT pass JSON data as parameters - it is already in session state
+- The Qualifications Matching Agent will read from session state
 - The Qualifications Matching Agent will then pass the torch to the Resume Writing Agent
 - The Resume Writing Agent will notify the Resume Critic Agent
 - The Resume Critic Agent owns the write-critique loop and will iterate until quality is achieved
 
-Step 2: CHECK FOR ERRORS AND CHAIN THEM
+Step 4: CHECK FOR ERRORS AND CHAIN THEM
 - Check the response from qualifications_matching_agent for the keyword "ERROR:"
 - If "ERROR:" is present:
   * Log the error
@@ -79,7 +148,7 @@ Step 2: CHECK FOR ERRORS AND CHAIN THEM
   * Return "ERROR: [resume_refiner_agent] -> <INSERT ERROR MESSAGE FROM CHILD>"
   * Stop
 
-Step 3: RETURN FINAL OPTIMIZED RESUME
+Step 5: RETURN FINAL OPTIMIZED RESUME
 
 CRITICAL FINAL RESPONSE:
 After qualifications_matching_agent completes, you MUST generate a final text response.
@@ -104,6 +173,13 @@ Parameter Validation:
   * Return "ERROR: [resume_refiner_agent] Missing required input JSON data"
   * Stop
 
+When using tools (save functions):
+- Check tool response for status: "error"
+- If status is "error":
+  * Log error
+  * Return "ERROR: [resume_refiner_agent] <INSERT ERROR MESSAGE FROM TOOL>"
+  * Stop
+
 When calling sub-agents (qualifications_matching_agent):
 - Check sub-agent response for the keyword "ERROR:"
 - If "ERROR:" is found:
@@ -115,18 +191,21 @@ When calling sub-agents (qualifications_matching_agent):
 Log all errors before returning them to parent agent.
 
 CRITICAL PRINCIPLES:
-- PARAMETER PASSING: All data comes via parameters, NOT session state
+- SESSION STATE: Save JSON documents to session state for downstream agents to access
+- SIMPLE DELEGATION: Call matching agent with simple request, not complex parameters
 - ERROR CHAINING: Prepend agent name to errors for debug traceability
-- LIGHTWEIGHT DESIGN: No custom tools needed, just delegation
+- LIGHTWEIGHT DESIGN: Use tools for state management, delegation for workflow
 - TRUST THE CHAIN: Let downstream agents handle their own complexity
 
 IMPORTANT:
 - You do NOT manage the write-critique loop (that is the Resume Critic Agent's responsibility)
 - You do NOT directly call Resume Writing or Resume Critic agents (torch-passing handles the sequential flow)
-- You do NOT read from session state (all data via parameters)
-- You simply validate inputs, delegate, chain errors, and return results
+- You save JSON to session state, then delegate with simple requests
+- You simply validate inputs, save to state, delegate, chain errors, and return results
 """,
         tools=[
+            save_resume_to_session,
+            save_job_description_to_session,
             AgentTool(agent=qualifications_matching_agent),
         ],
         sub_agents=[
