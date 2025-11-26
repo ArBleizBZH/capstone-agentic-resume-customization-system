@@ -24,7 +24,7 @@ def create_resume_refiner_agent():
     # Import Matching Agent (only agent this orchestrator directly calls)
     from src.agents.qualifications_matching_agent import create_qualifications_matching_agent
 
-    matching_agent = create_qualifications_matching_agent()
+    qualifications_matching_agent = create_qualifications_matching_agent()
 
     agent = LlmAgent(
         name="resume_refiner_agent",
@@ -127,7 +127,10 @@ IMPORTANT:
 - You simply validate inputs, delegate, chain errors, and return results
 """,
         tools=[
-            AgentTool(agent=matching_agent),
+            AgentTool(agent=qualifications_matching_agent),
+        ],
+        sub_agents=[
+            qualifications_matching_agent,
         ],
     )
 

@@ -141,6 +141,10 @@ Use the canonical 'read_file' tool name for MCP filesystem operations.
             AgentTool(agent=resume_ingest_agent),
             AgentTool(agent=job_description_ingest_agent),
         ],
+        sub_agents=[
+            resume_ingest_agent,
+            job_description_ingest_agent,
+        ],
     )
 
     return agent

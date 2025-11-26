@@ -123,6 +123,10 @@ If any sub-agent returns an ERROR, immediately relay it to the user.
             AgentTool(agent=application_documents_agent),
             AgentTool(agent=resume_refiner_agent),
         ],
+        sub_agents=[
+            application_documents_agent,
+            resume_refiner_agent,
+        ],
     )
 
     return agent

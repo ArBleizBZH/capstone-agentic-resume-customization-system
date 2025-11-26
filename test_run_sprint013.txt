@@ -1,0 +1,20 @@
+Cleaned up logs/logger.log
+Cleaned up logs/web.log
+Cleaned up logs/metrics.log
+Development mode: DEBUG logging enabled
+Logging configured (development mode)
+  Main log: logs/logger.log (DEBUG)
+  Web log: logs/web.log (DEBUG)
+  Metrics log: logs/metrics.log (INFO)
+  Console: DEBUG
+Traceback (most recent call last):
+  File "/mnt/e/_Data/_Education/DataScience/Google_AI_Agents_Intensive/CAPSTONE_ANTIGRAVITY/main.py", line 9, in <module>
+    from src.app import create_runner
+  File "/mnt/e/_Data/_Education/DataScience/Google_AI_Agents_Intensive/CAPSTONE_ANTIGRAVITY/src/app.py", line 15, in <module>
+    from src.agents.job_application_agent import create_job_application_agent
+  File "/mnt/e/_Data/_Education/DataScience/Google_AI_Agents_Intensive/CAPSTONE_ANTIGRAVITY/src/agents/__init__.py", line 13, in <module>
+    from src.agents.resume_critic_agent import create_resume_critic_agent
+  File "/mnt/e/_Data/_Education/DataScience/Google_AI_Agents_Intensive/CAPSTONE_ANTIGRAVITY/src/agents/resume_critic_agent.py", line 353
+    """,
+    ^
+SyntaxError: unterminated triple-quoted string literal (detected at line 360)

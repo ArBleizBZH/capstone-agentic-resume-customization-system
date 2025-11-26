@@ -100,6 +100,9 @@ CRITICAL RULES:
         tools=[
             AgentTool(agent=qualifications_checker_agent),
         ],
+        sub_agents=[
+            qualifications_checker_agent,
+        ],
     )
 
     return agent

@@ -1,0 +1,445 @@
+DEBUG: Using selector: EpollSelector
+INFO: [Metrics] ResumeOptimizationMetricsPlugin initialized
+INFO: Plugin 'logging_plugin' registered.
+INFO: Plugin 'resume_optimization_metrics' registered.
+INFO: [Metrics] Job Application Agent called (total: 1)
+DEBUG: [Metrics] Agent 'job_application_agent' starting (total agents called: 1)
+Secure MCP Filesystem Server running on stdio
+DEBUG: Created new session: stdio_session
+Client does not support MCP Roots, using allowed directories set from server args: [ '/home/ludo/capstone_mcp_test' ]
+/mnt/e/_Data/_Education/DataScience/Google_AI_Agents_Intensive/CAPSTONE/venv/lib/python3.13/site-packages/google/adk/tools/mcp_tool/mcp_tool.py:103: UserWarning: [EXPERIMENTAL] BaseAuthenticatedTool: This feature is experimental and may change or be removed in future versions without notice. It may introduce breaking changes at any time.
+  super().__init__(
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+INFO: 
+Note: Conversion of fields that are not included in the JSONSchema class are ignored.
+Json Schema is now supported natively by both Vertex AI and Gemini API. Users
+are recommended to pass/receive Json Schema directly to/from the API. For example:
+1. the counter part of GenerateContentConfig.response_schema is
+   GenerateContentConfig.response_json_schema, which accepts [JSON
+  Schema](https://json-schema.org/)
+2. the counter part of FunctionDeclaration.parameters is
+   FunctionDeclaration.parameters_json_schema, which accepts [JSON
+   Schema](https://json-schema.org/)
+3. the counter part of FunctionDeclaration.response is
+   FunctionDeclaration.response_json_schema, which accepts [JSON
+   Schema](https://json-schema.org/)
+
+DEBUG: [Metrics] LLM call #1
+INFO: Sending out request, model: gemini-2.5-flash-lite, backend: GoogleLLMVariant.GEMINI_API, stream: False
+DEBUG: 
+LLM Request:
+-----------------------------------------------------------
+System Instruction:
+You are the Job Application Agent, the root orchestrator responsible for
+coordinating the complete resume customization workflow.
+
+ROLE AND AUTHORITY:
+You orchestrate the entire resume optimization process. You are responsible for reading files,
+ingesting them into structured data, and delegating to the refiner agent.
+
+WORKFLOW:
+
+1.  **READ FILES**: Call the `read_file` tool to read BOTH 'resume.md' and 'job_description.md'.
+    -   Wait for the file contents.
+
+2.  **INGEST RESUME**: Call `ingest_resume` with the content of 'resume.md' as the `resume_text` parameter.
+    -   **CRITICAL**: Capture the JSON string returned by the tool.
+
+3.  **INGEST JOB DESCRIPTION**: Call `ingest_job_description` with the content of 'job_description.md' as the `job_description_text` parameter.
+    -   **CRITICAL**: Capture the JSON string returned by the tool.
+
+4.  **REFINE RESUME**: Call `refine_resume` with the captured data.
+    -   Pass the captured JSON strings as `json_resume` and `json_job_description`.
+    -   Pass the original text content as `resume_text` and `job_description_text`.
+
+5.  **RETURN RESULT**: Return the final optimized resume to the user.
+
+ERROR HANDLING:
+- If any file read fails, stop and report error.
+- If any ingest tool returns "ERROR:", stop and report error.
+- If refiner tool returns "ERROR:", stop and report error.
+
+MANDATORY FINAL RESPONSE FORMAT:
+SUCCESS: Resume customization workflow complete.
+
+OPTIMIZED_RESUME:
+<INSERT THE COMPLETE OPTIMIZED RESUME MARKDOWN HERE>
+
+PROCESS_SUMMARY:
+- Documents loaded and structured
+- Qualifications matched
+- Resume optimized based on job requirements
+
+
+You are an agent. Your internal name is "job_application_agent". The description about you is "Root orchestrator for resume customization.".
+-----------------------------------------------------------
+Config:
+{'tools': [{}]}
+-----------------------------------------------------------
+Contents:
+{"parts":[{"text":"Please optimize my resume for this job application. Resume file: resume.md. Job description file: job_description.md."}],"role":"user"}
+-----------------------------------------------------------
+Functions:
+read_file: {} 
+read_text_file: {} 
+read_media_file: {} 
+read_multiple_files: {} 
+write_file: {} 
+edit_file: {} 
+create_directory: {} 
+list_directory: {} 
+list_directory_with_sizes: {} 
+directory_tree: {} 
+move_file: {} 
+search_files: {} 
+get_file_info: {} 
+list_allowed_directories: {} 
+ingest_resume: {'resume_text': {'type': <Type.STRING: 'STRING'>}} 
+ingest_job_description: {'job_description_text': {'type': <Type.STRING: 'STRING'>}} 
+refine_resume: {'json_resume': {'type': <Type.STRING: 'STRING'>}, 'json_job_description': {'type': <Type.STRING: 'STRING'>}, 'resume_text': {'type': <Type.STRING: 'STRING'>}, 'job_description_text': {'type': <Type.STRING: 'STRING'>}} 
+-----------------------------------------------------------
+
+DEBUG: connect_tcp.started host='generativelanguage.googleapis.com' port=443 local_address=None timeout=None socket_options=None
+DEBUG: connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x74a53a999160>
+DEBUG: start_tls.started ssl_context=<ssl.SSLContext object at 0x74a53a8ed8b0> server_hostname='generativelanguage.googleapis.com' timeout=None
+DEBUG: start_tls.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x74a53aa99f90>
+DEBUG: send_request_headers.started request=<Request [b'POST']>
+DEBUG: send_request_headers.complete
+DEBUG: send_request_body.started request=<Request [b'POST']>
+DEBUG: send_request_body.complete
+DEBUG: receive_response_headers.started request=<Request [b'POST']>
+DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Tue, 25 Nov 2025 22:00:30 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=657'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 200 OK"
+DEBUG: receive_response_body.started request=<Request [b'POST']>
+DEBUG: receive_response_body.complete
+DEBUG: response_closed.started
+DEBUG: response_closed.complete
+INFO: Response received from the model.
+WARNING: Warning: there are non-text parts in the response: ['function_call', 'function_call'], returning concatenated text result from text parts. Check the full candidates.content.parts accessor to get the full model response.
+DEBUG: 
+LLM Response:
+-----------------------------------------------------------
+Text:
+None
+-----------------------------------------------------------
+Function calls:
+name: read_text_file, args: {'path': 'resume.md'}
+name: read_text_file, args: {'path': 'job_description.md'}
+-----------------------------------------------------------
+Raw response:
+{"sdk_http_response":{"headers":{"content-type":"application/json; charset=UTF-8","vary":"Origin, X-Origin, Referer","content-encoding":"gzip","date":"Tue, 25 Nov 2025 22:00:30 GMT","server":"scaffolding on HTTPServer2","x-xss-protection":"0","x-frame-options":"SAMEORIGIN","x-content-type-options":"nosniff","server-timing":"gfet4t7; dur=657","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","transfer-encoding":"chunked"}},"candidates":[{"content":{"parts":[{"function_call":{"args":{"path":"resume.md"},"name":"read_text_file"}},{"function_call":{"args":{"path":"job_description.md"},"name":"read_text_file"}}],"role":"model"},"finish_reason":"STOP","index":0}],"model_version":"gemini-2.5-flash-lite","response_id":"_iYmafDzJtjf_uMPo562iQQ","usage_metadata":{"candidates_token_count":40,"prompt_token_count":1824,"prompt_tokens_details":[{"modality":"TEXT","token_count":1824}],"total_token_count":1864}}
+-----------------------------------------------------------
+
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: [Metrics] Tool call #1
+DEBUG: [Metrics] Tool call #2
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: auth_config or auth_config.auth_scheme is missing, so authentication will be skipped.
+DEBUG: [Metrics] LLM call #2
+INFO: Sending out request, model: gemini-2.5-flash-lite, backend: GoogleLLMVariant.GEMINI_API, stream: False
+DEBUG: 
+LLM Request:
+-----------------------------------------------------------
+System Instruction:
+You are the Job Application Agent, the root orchestrator responsible for
+coordinating the complete resume customization workflow.
+
+ROLE AND AUTHORITY:
+You orchestrate the entire resume optimization process. You are responsible for reading files,
+ingesting them into structured data, and delegating to the refiner agent.
+
+WORKFLOW:
+
+1.  **READ FILES**: Call the `read_file` tool to read BOTH 'resume.md' and 'job_description.md'.
+    -   Wait for the file contents.
+
+2.  **INGEST RESUME**: Call `ingest_resume` with the content of 'resume.md' as the `resume_text` parameter.
+    -   **CRITICAL**: Capture the JSON string returned by the tool.
+
+3.  **INGEST JOB DESCRIPTION**: Call `ingest_job_description` with the content of 'job_description.md' as the `job_description_text` parameter.
+    -   **CRITICAL**: Capture the JSON string returned by the tool.
+
+4.  **REFINE RESUME**: Call `refine_resume` with the captured data.
+    -   Pass the captured JSON strings as `json_resume` and `json_job_description`.
+    -   Pass the original text content as `resume_text` and `job_description_text`.
+
+5.  **RETURN RESULT**: Return the final optimized resume to the user.
+
+ERROR HANDLING:
+- If any file read fails, stop and report error.
+- If any ingest tool returns "ERROR:", stop and report error.
+- If refiner tool returns "ERROR:", stop and report error.
+
+MANDATORY FINAL RESPONSE FORMAT:
+SUCCESS: Resume customization workflow complete.
+
+OPTIMIZED_RESUME:
+<INSERT THE COMPLETE OPTIMIZED RESUME MARKDOWN HERE>
+
+PROCESS_SUMMARY:
+- Documents loaded and structured
+- Qualifications matched
+- Resume optimized based on job requirements
+
+
+You are an agent. Your internal name is "job_application_agent". The description about you is "Root orchestrator for resume customization.".
+-----------------------------------------------------------
+Config:
+{'tools': [{}]}
+-----------------------------------------------------------
+Contents:
+{"parts":[{"text":"Please optimize my resume for this job application. Resume file: resume.md. Job description file: job_description.md."}],"role":"user"}
+{"parts":[{"function_call":{"args":{"path":"resume.md"},"name":"read_text_file"}},{"function_call":{"args":{"path":"job_description.md"},"name":"read_text_file"}}],"role":"model"}
+{"parts":[{"function_response":{"name":"read_text_file","response":{"content":[{"type":"text","text":"# Sarah Chen\r\n**Software Engineer**\r\n\r\nEmail: sarah.chen@email.com | Phone: (555) 123-4567 | Location: San Francisco, CA\r\n\r\n## Professional Summary\r\n\r\nExperienced software engineer with 5 years of expertise in full-stack development, cloud architecture, and agile methodologies. Proven track record of delivering scalable applications and leading cross-functional teams.\r\n\r\n## Work Experience\r\n\r\n### Senior Software Engineer\r\n**TechCorp Solutions** | San Francisco, CA | Jan 2021 - Present\r\n\r\n- Led development of microservices architecture serving 2M+ daily active users\r\n- Reduced API response time by 40% through database optimization and caching strategies\r\n- Mentored team of 4 junior developers, improving code quality and deployment frequency\r\n- Implemented CI/CD pipeline reducing deployment time from 2 hours to 15 minutes\r\n\r\n### Software Engineer\r\n**StartupXYZ** | San Francisco, CA | Jun 2019 - Dec 2020\r\n\r\n- Developed RESTful APIs using Python/Django for e-commerce platform\r\n- Built responsive front-end interfaces with React and TypeScript\r\n- Collaborated with product team to deliver 3 major feature releases on schedule\r\n- Improved test coverage from 45% to 85% through comprehensive unit and integration testing\r\n\r\n### Junior Developer\r\n**Digital Innovations Inc** | San Jose, CA | Jul 2018 - May 2019\r\n\r\n- Contributed to development of customer-facing web applications\r\n- Fixed bugs and implemented minor features in Java Spring Boot applications\r\n- Participated in code reviews and agile sprint planning meetings\r\n\r\n## Education\r\n\r\n### Bachelor of Science in Computer Science\r\n**University of California, Berkeley** | 2014 - 2018\r\n\r\n- GPA: 3.7/4.0\r\n- Relevant Coursework: Data Structures, Algorithms, Database Systems, Software Engineering\r\n\r\n## Technical Skills\r\n\r\n**Languages:** Python, JavaScript, TypeScript, Java, SQL\r\n**Frameworks:** Django, React, Node.js, Spring Boot\r\n**Cloud:** AWS (EC2, S3, Lambda, RDS), Docker, Kubernetes\r\n**Databases:** PostgreSQL, MySQL, MongoDB, Redis\r\n**Tools:** Git, Jenkins, JIRA, Postman\r\n"}],"isError":false}}},{"function_response":{"name":"read_text_file","response":{"content":[{"type":"text","text":"# Senior Backend Engineer\r\n\r\n**Company:** CloudScale Technologies\r\n**Location:** San Francisco, CA (Hybrid)\r\n**Type:** Full-time\r\n\r\n## About the Role\r\n\r\nWe are seeking a talented Senior Backend Engineer to join our growing engineering team. You will be responsible for designing, developing, and maintaining scalable backend systems that power our cloud infrastructure platform.\r\n\r\n## Responsibilities\r\n\r\n- Design and implement highly scalable microservices architecture\r\n- Optimize database queries and API performance for high-traffic applications\r\n- Collaborate with cross-functional teams including product, design, and DevOps\r\n- Mentor junior engineers and conduct code reviews\r\n- Participate in on-call rotation to ensure system reliability\r\n- Contribute to architectural decisions and technical roadmap\r\n\r\n## Required Qualifications\r\n\r\n- 5+ years of experience in backend software development\r\n- Strong proficiency in Python or Go\r\n- Experience with microservices architecture and RESTful API design\r\n- Solid understanding of database systems (PostgreSQL, MySQL, or MongoDB)\r\n- Experience with cloud platforms (AWS, GCP, or Azure)\r\n- Proficiency with containerization technologies (Docker, Kubernetes)\r\n- Strong problem-solving skills and attention to detail\r\n- Excellent communication and collaboration abilities\r\n\r\n## Preferred Qualifications\r\n\r\n- Experience with Django or FastAPI frameworks\r\n- Knowledge of message queuing systems (RabbitMQ, Kafka)\r\n- Familiarity with CI/CD pipelines and DevOps practices\r\n- Experience with monitoring and observability tools (Datadog, Prometheus, Grafana)\r\n- Contributions to open-source projects\r\n- Experience leading technical projects or mentoring teams\r\n\r\n## What We Offer\r\n\r\n- Competitive salary and equity package\r\n- Comprehensive health, dental, and vision insurance\r\n- 401(k) with company match\r\n- Flexible work arrangements (hybrid remote)\r\n- Professional development budget\r\n- Collaborative and innovative team culture\r\n\r\n## About CloudScale Technologies\r\n\r\nCloudScale Technologies is a leading provider of cloud infrastructure solutions, serving over 10,000 customers worldwide. Our mission is to simplify cloud operations and enable businesses to scale effortlessly.\r\n\r\nWe are an equal opportunity employer and value diversity at our company.\r\n"}],"isError":false}}}],"role":"user"}
+-----------------------------------------------------------
+Functions:
+read_file: {} 
+read_text_file: {} 
+read_media_file: {} 
+read_multiple_files: {} 
+write_file: {} 
+edit_file: {} 
+create_directory: {} 
+list_directory: {} 
+list_directory_with_sizes: {} 
+directory_tree: {} 
+move_file: {} 
+search_files: {} 
+get_file_info: {} 
+list_allowed_directories: {} 
+ingest_resume: {'resume_text': {'type': <Type.STRING: 'STRING'>}} 
+ingest_job_description: {'job_description_text': {'type': <Type.STRING: 'STRING'>}} 
+refine_resume: {'json_resume': {'type': <Type.STRING: 'STRING'>}, 'json_job_description': {'type': <Type.STRING: 'STRING'>}, 'resume_text': {'type': <Type.STRING: 'STRING'>}, 'job_description_text': {'type': <Type.STRING: 'STRING'>}} 
+-----------------------------------------------------------
+
+DEBUG: send_request_headers.started request=<Request [b'POST']>
+DEBUG: send_request_headers.complete
+DEBUG: send_request_body.started request=<Request [b'POST']>
+DEBUG: send_request_body.complete
+DEBUG: receive_response_headers.started request=<Request [b'POST']>
+DEBUG: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Tue, 25 Nov 2025 22:00:31 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=334'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+INFO: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 200 OK"
+DEBUG: receive_response_body.started request=<Request [b'POST']>
+DEBUG: receive_response_body.complete
+DEBUG: response_closed.started
+DEBUG: response_closed.complete
+INFO: Response received from the model.
+DEBUG: 
+LLM Response:
+-----------------------------------------------------------
+Text:
+None
+-----------------------------------------------------------
+Function calls:
+
+-----------------------------------------------------------
+Raw response:
+{"sdk_http_response":{"headers":{"content-type":"application/json; charset=UTF-8","vary":"Origin, X-Origin, Referer","content-encoding":"gzip","date":"Tue, 25 Nov 2025 22:00:31 GMT","server":"scaffolding on HTTPServer2","x-xss-protection":"0","x-frame-options":"SAMEORIGIN","x-content-type-options":"nosniff","server-timing":"gfet4t7; dur=334","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","transfer-encoding":"chunked"}},"candidates":[{"content":{"role":"model"},"finish_reason":"STOP","index":0}],"model_version":"gemini-2.5-flash-lite","response_id":"_iYmaZnLPKGh_PUPqKCRoA0","usage_metadata":{"prompt_token_count":3151,"prompt_tokens_details":[{"modality":"TEXT","token_count":3151}],"total_token_count":3151}}
+-----------------------------------------------------------
+
+DEBUG: [Metrics] Agent 'job_application_agent' completed (no timing data)
+DEBUG: close.started
+DEBUG: close.failed exception=CancelledError()
+ERROR: unhandled exception during asyncio.run() shutdown
+task: <Task finished name='Task-6' coro=<<async_generator_athrow without __name__>()> exception=RuntimeError('Attempted to exit cancel scope in a different task than it was entered in')>
+Traceback (most recent call last):
+  File "/mnt/e/_Data/_Education/DataScience/Google_AI_Agents_Intensive/CAPSTONE/venv/lib/python3.13/site-packages/anyio/_backends/_asyncio.py", line 785, in __aexit__
+    raise exc_val
+  File "/mnt/e/_Data/_Education/DataScience/Google_AI_Agents_Intensive/CAPSTONE/venv/lib/python3.13/site-packages/mcp/client/stdio/__init__.py", line 189, in stdio_client
+    yield read_stream, write_stream
+asyncio.exceptions.CancelledError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/mnt/e/_Data/_Education/DataScience/Google_AI_Agents_Intensive/CAPSTONE/venv/lib/python3.13/site-packages/mcp/client/stdio/__init__.py", line 183, in stdio_client
+    anyio.create_task_group() as tg,
+    ~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/mnt/e/_Data/_Education/DataScience/Google_AI_Agents_Intensive/CAPSTONE/venv/lib/python3.13/site-packages/anyio/_backends/_asyncio.py", line 787, in __aexit__
+    if self.cancel_scope.__exit__(type(exc), exc, exc.__traceback__):
+       ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/e/_Data/_Education/DataScience/Google_AI_Agents_Intensive/CAPSTONE/venv/lib/python3.13/site-packages/anyio/_backends/_asyncio.py", line 459, in __exit__
+    raise RuntimeError(
+    ...<2 lines>...
+    )
+RuntimeError: Attempted to exit cancel scope in a different task than it was entered in
+Cleaned up logs/logger.log
+Cleaned up logs/web.log
+Cleaned up logs/metrics.log
+Development mode: DEBUG logging enabled
+Logging configured (development mode)
+  Main log: logs/logger.log (DEBUG)
+  Web log: logs/web.log (DEBUG)
+  Metrics log: logs/metrics.log (INFO)
+  Console: DEBUG
+
+============================================================
+Resume Optimization System - Sprint 012 E2E Test
+============================================================
+
+Creating runner...
+Development plugins loaded: LoggingPlugin, ResumeOptimizationMetricsPlugin
+Runner configured (development mode) with InMemorySessionService
+
+Running full workflow with input files...
+  Resume: resume.md (via MCP)
+  Job Description: job_description.md (via MCP)
+
+
+ ### Created new session: debug_session_id
+
+User > Please optimize my resume for this job application. Resume file: resume.md. Job description file: job_description.md.
+[90m[logging_plugin] 🚀 USER MESSAGE RECEIVED[0m
+[90m[logging_plugin]    Invocation ID: e-a0e3ad32-84d5-4881-afea-e9f7b1374fbc[0m
+[90m[logging_plugin]    Session ID: debug_session_id[0m
+[90m[logging_plugin]    User ID: debug_user_id[0m
+[90m[logging_plugin]    App Name: resume_optimizer_app[0m
+[90m[logging_plugin]    Root Agent: job_application_agent[0m
+[90m[logging_plugin]    User Content: text: 'Please optimize my resume for this job application. Resume file: resume.md. Job description file: job_description.md.'[0m
+[90m[logging_plugin] 🏃 INVOCATION STARTING[0m
+[90m[logging_plugin]    Invocation ID: e-a0e3ad32-84d5-4881-afea-e9f7b1374fbc[0m
+[90m[logging_plugin]    Starting Agent: job_application_agent[0m
+[90m[logging_plugin] 🤖 AGENT STARTING[0m
+[90m[logging_plugin]    Agent Name: job_application_agent[0m
+[90m[logging_plugin]    Invocation ID: e-a0e3ad32-84d5-4881-afea-e9f7b1374fbc[0m
+[90m[logging_plugin] 🧠 LLM REQUEST[0m
+[90m[logging_plugin]    Model: gemini-2.5-flash-lite[0m
+[90m[logging_plugin]    Agent: job_application_agent[0m
+[90m[logging_plugin]    System Instruction: 'You are the Job Application Agent, the root orchestrator responsible for
+coordinating the complete resume customization workflow.
+
+ROLE AND AUTHORITY:
+You orchestrate the entire resume optimization pr...'[0m
+[90m[logging_plugin]    Available Tools: ['read_file', 'read_text_file', 'read_media_file', 'read_multiple_files', 'write_file', 'edit_file', 'create_directory', 'list_directory', 'list_directory_with_sizes', 'directory_tree', 'move_file', 'search_files', 'get_file_info', 'list_allowed_directories', 'ingest_resume', 'ingest_job_description', 'refine_resume'][0m
+[90m[logging_plugin] 🧠 LLM RESPONSE[0m
+[90m[logging_plugin]    Agent: job_application_agent[0m
+[90m[logging_plugin]    Content: function_call: read_text_file | function_call: read_text_file[0m
+[90m[logging_plugin]    Token Usage - Input: 1824, Output: 40[0m
+[90m[logging_plugin] 📢 EVENT YIELDED[0m
+[90m[logging_plugin]    Event ID: df62c6c4-c743-40d3-a84e-17b2be008520[0m
+[90m[logging_plugin]    Author: job_application_agent[0m
+[90m[logging_plugin]    Content: function_call: read_text_file | function_call: read_text_file[0m
+[90m[logging_plugin]    Final Response: False[0m
+[90m[logging_plugin]    Function Calls: ['read_text_file', 'read_text_file'][0m
+[90m[logging_plugin] 🔧 TOOL STARTING[0m
+[90m[logging_plugin]    Tool Name: read_text_file[0m
+[90m[logging_plugin]    Agent: job_application_agent[0m
+[90m[logging_plugin]    Function Call ID: adk-9f119ab9-60c8-4c14-b4f3-f45a279d7b6f[0m
+[90m[logging_plugin]    Arguments: {'path': 'resume.md'}[0m
+[90m[logging_plugin] 🔧 TOOL STARTING[0m
+[90m[logging_plugin]    Tool Name: read_text_file[0m
+[90m[logging_plugin]    Agent: job_application_agent[0m
+[90m[logging_plugin]    Function Call ID: adk-41e40d77-68d8-4742-9ef9-6654469c2f9c[0m
+[90m[logging_plugin]    Arguments: {'path': 'job_description.md'}[0m
+[90m[logging_plugin] 🔧 TOOL COMPLETED[0m
+[90m[logging_plugin]    Tool Name: read_text_file[0m
+[90m[logging_plugin]    Agent: job_application_agent[0m
+[90m[logging_plugin]    Function Call ID: adk-41e40d77-68d8-4742-9ef9-6654469c2f9c[0m
+[90m[logging_plugin]    Result: {'content': [{'type': 'text', 'text': '# Senior Backend Engineer\r\n\r\n**Company:** CloudScale Technologies\r\n**Location:** San Francisco, CA (Hybrid)\r\n**Type:** Full-time\r\n\r\n## About the Role\r\n\r\nWe are seeking a talented Senior Backend Engineer to join our growing engineering team. You ...}[0m
+[90m[logging_plugin] 🔧 TOOL COMPLETED[0m
+[90m[logging_plugin]    Tool Name: read_text_file[0m
+[90m[logging_plugin]    Agent: job_application_agent[0m
+[90m[logging_plugin]    Function Call ID: adk-9f119ab9-60c8-4c14-b4f3-f45a279d7b6f[0m
+[90m[logging_plugin]    Result: {'content': [{'type': 'text', 'text': '# Sarah Chen\r\n**Software Engineer**\r\n\r\nEmail: sarah.chen@email.com | Phone: (555) 123-4567 | Location: San Francisco, CA\r\n\r\n## Professional Summary\r\n\r\nExperienced software engineer with 5 years of expertise in full-stack development, cloud archite...}[0m
+[90m[logging_plugin] 📢 EVENT YIELDED[0m
+[90m[logging_plugin]    Event ID: 34a1eed9-8721-4002-8aad-41583a44f1ec[0m
+[90m[logging_plugin]    Author: job_application_agent[0m
+[90m[logging_plugin]    Content: function_response: read_text_file | function_response: read_text_file[0m
+[90m[logging_plugin]    Final Response: False[0m
+[90m[logging_plugin]    Function Responses: ['read_text_file', 'read_text_file'][0m
+[90m[logging_plugin] 🧠 LLM REQUEST[0m
+[90m[logging_plugin]    Model: gemini-2.5-flash-lite[0m
+[90m[logging_plugin]    Agent: job_application_agent[0m
+[90m[logging_plugin]    System Instruction: 'You are the Job Application Agent, the root orchestrator responsible for
+coordinating the complete resume customization workflow.
+
+ROLE AND AUTHORITY:
+You orchestrate the entire resume optimization pr...'[0m
+[90m[logging_plugin]    Available Tools: ['read_file', 'read_text_file', 'read_media_file', 'read_multiple_files', 'write_file', 'edit_file', 'create_directory', 'list_directory', 'list_directory_with_sizes', 'directory_tree', 'move_file', 'search_files', 'get_file_info', 'list_allowed_directories', 'ingest_resume', 'ingest_job_description', 'refine_resume'][0m
+[90m[logging_plugin] 🧠 LLM RESPONSE[0m
+[90m[logging_plugin]    Agent: job_application_agent[0m
+[90m[logging_plugin]    Content: None[0m
+[90m[logging_plugin]    Token Usage - Input: 3151, Output: None[0m
+[90m[logging_plugin] 📢 EVENT YIELDED[0m
+[90m[logging_plugin]    Event ID: 8c7bcae5-c2ce-4160-8a6c-acaaa0e6748f[0m
+[90m[logging_plugin]    Author: job_application_agent[0m
+[90m[logging_plugin]    Content: None[0m
+[90m[logging_plugin]    Final Response: True[0m
+[90m[logging_plugin] 🤖 AGENT COMPLETED[0m
+[90m[logging_plugin]    Agent Name: job_application_agent[0m
+[90m[logging_plugin]    Invocation ID: e-a0e3ad32-84d5-4881-afea-e9f7b1374fbc[0m
+[90m[logging_plugin] ✅ INVOCATION COMPLETED[0m
+[90m[logging_plugin]    Invocation ID: e-a0e3ad32-84d5-4881-afea-e9f7b1374fbc[0m
+[90m[logging_plugin]    Final Agent: job_application_agent[0m
+
+============================================================
+Sprint 012 E2E Test Complete!
+============================================================
+
+Workflow executed.
+Logs saved to:
+  - logs/logger.log (main application log)
+  - logs/web.log (web UI log)
+  - logs/metrics.log (metrics-specific log)
+
+============================================================
+METRICS SUMMARY
+============================================================
+
+Agent Invocations:
+  Job Applications Processed: 1
+  Resume Refinements: 0
+  Qualifications Matches: 0
+  Critic Reviews: 0
+  Writing Generations: 0
+
+System Operations:
+  Total Agent Calls: 1
+  Total LLM Calls: 2
+  Total Tool Calls: 2
+  Total Errors: 0
+
+Performance:
+  Average Duration: 0.0s
+  Max Duration: 0.0s
+  Min Duration: 0.0s
+============================================================
+

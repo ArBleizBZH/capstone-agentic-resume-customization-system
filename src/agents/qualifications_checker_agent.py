@@ -224,6 +224,9 @@ CRITICAL PRINCIPLES:
             save_possible_matches_to_session,
             AgentTool(agent=resume_writing_agent),
         ],
+        sub_agents=[
+            resume_writing_agent,
+        ],
     )
 
     return agent
