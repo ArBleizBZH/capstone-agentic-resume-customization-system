@@ -76,8 +76,9 @@ If either file read fails, log the error and return "ERROR: [application_documen
 
 **STEP 2: INGEST RESUME (REQUIRED - DO NOT SKIP)**
 Once you have the full text content of 'resume.md', you MUST immediately call the resume_ingest_agent.
-   - Pass the full resume text content as the 'resume_content' parameter
-   - DO NOT proceed until you call this agent
+- Call resume_ingest_agent with the following parameter:
+  * resume: The complete text content from resume.md file
+- DO NOT proceed until you call this agent
 
 **STEP 3: CHECK RESUME INGEST RESPONSE**
 Check the response from resume_ingest_agent for the keyword "ERROR:"
@@ -86,8 +87,9 @@ Check the response from resume_ingest_agent for the keyword "ERROR:"
 
 **STEP 4: INGEST JOB DESCRIPTION (REQUIRED - DO NOT SKIP)**
 Once you have the full text content of 'job_description.md', you MUST immediately call the job_description_ingest_agent.
-   - Pass the full job description text content as the 'job_description_content' parameter
-   - DO NOT proceed until you call this agent
+- Call job_description_ingest_agent with the following parameter:
+  * job_description: The complete text content from job_description.md file
+- DO NOT proceed until you call this agent
 
 **STEP 5: CHECK JD INGEST RESPONSE**
 Check the response from job_description_ingest_agent for the keyword "ERROR:"
