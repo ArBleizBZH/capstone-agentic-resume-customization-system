@@ -53,6 +53,9 @@ Project_Documentation/
 CLAUDE.md
 docs/
 
+# Internal engineering guide (not for version control)
+src/agents/ENGINEERING_GUIDE.md
+
 # Exclude temporary and context files
 SPRINT_*_STATUS.md
 test_output.txt

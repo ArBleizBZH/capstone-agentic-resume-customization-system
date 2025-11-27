@@ -11,22 +11,22 @@ from google.genai import types
 from src.config.model_config import GEMINI_FLASH_MODEL, retry_config, GOOGLE_API_KEY
 
 
-def save_json_resume_to_session(tool_context: ToolContext, json_data: str) -> dict:
-    """Save structured resume JSON to session state.
+def save_resume_dict_to_session(tool_context: ToolContext, resume_dict: dict) -> dict:
+    """Save structured resume dict to session state.
 
     Args:
         tool_context: ADK tool context with state access
-        json_data: JSON string containing structured resume data
+        resume_dict: Dictionary containing structured resume data
 
     Returns:
         Dictionary with status and message
     """
     try:
-        # Strip markdown code blocks if LLM adds them
-        clean_json = json_data.replace("```json", "").replace("```", "").strip()
-
-        # Parse JSON string to validate format
-        resume_dict = json.loads(clean_json)
+        if not isinstance(resume_dict, dict):
+            return {
+                "status": "error",
+                "message": "resume_dict must be a dictionary"
+            }
 
         # Validate required fields
         if "contact_info" not in resume_dict:
@@ -47,21 +47,16 @@ def save_json_resume_to_session(tool_context: ToolContext, json_data: str) -> di
                 "message": "Missing required field: contact_info.email"
             }
 
-        # Save to session state
-        tool_context.state["json_resume"] = resume_dict
+        # Save to session state with standardized key
+        tool_context.state["resume_dict"] = resume_dict
 
         return {
             "status": "success",
-            "message": "Structured resume JSON saved to session state",
+            "message": "Structured resume dict saved to session state",
             "sections_parsed": list(resume_dict.keys()),
             "work_history_count": len(resume_dict.get("work_history", []))
         }
 
-    except json.JSONDecodeError as e:
-        return {
-            "status": "error",
-            "message": f"Invalid JSON format: {str(e)}"
-        }
     except Exception as e:
         return {
             "status": "error",
@@ -94,16 +89,16 @@ def create_resume_ingest_agent():
                 )
             )
         ),
-        description="Converts resume text to structured JSON using Tier 1 core schema.",
+        description="Converts resume text to structured Python dict using Tier 1 core schema.",
         instruction="""You are the Resume Ingest Agent.
-Your Goal: Convert resume text into structured JSON that enables precise qualification matching.
+Your Goal: Convert resume text into a structured Python dictionary that enables precise qualification matching.
 
 WORKFLOW:
 
-1.  **RECEIVE CONTENT**: You will receive resume text as the 'resume' parameter.
-2.  **PARSE TO JSON**: Extract and structure the content into the required JSON schema (contact_info, profile_summary, work_history, skills, education, certifications_licenses).
-3.  **SAVE TO SESSION**: Call `save_json_resume_to_session` with the JSON string.
-4.  **GENERATE FINAL RESPONSE**: After the save tool completes successfully, you MUST generate a text response containing the JSON.
+1. **RECEIVE CONTENT**: You will receive resume text as the 'resume' parameter.
+2. **PARSE TO DICT**: Extract and structure the content into a Python dictionary following the required schema (contact_info, profile_summary, work_history, skills, education, certifications_licenses).
+3. **SAVE TO SESSION**: Call `save_resume_dict_to_session` with the Python dictionary.
+4. **GENERATE FINAL RESPONSE**: After the save tool completes successfully, you MUST generate a simple text response.
 
 **CRITICAL**: Steps 3 and 4 are BOTH required. Do NOT stop after calling the save tool.
 **DO NOT RETURN None** or empty content after the tool completes.
@@ -113,10 +108,11 @@ CRITICAL RULES:
 - Extract ONLY information explicitly stated in the source - NO FABRICATION
 - Omit empty/null fields - don't include keys with no data
 - Preserve exact wording (especially achievements) - NO rephrasing
+- Generate a Python dict structure, NOT a JSON string
 - **AFTER save tool succeeds: You MUST generate the final response below**
 - **DO NOT STOP after tool call - continue to Step 4**
 
-JSON SCHEMA:
+DICT SCHEMA:
 - contact_info (required): name*, email*, address, phone, linkedin, github
 - profile_summary (optional object): professional_summary, professional_highlights[]
 - work_history (optional array): job objects with job_id (job_001, job_002...), job_company*, job_title*, job_operated_as, job_location, job_employment_dates, job_summary, job_achievements[], job_technologies[], job_skills[]
@@ -133,13 +129,10 @@ IMPORTANT:
 MANDATORY FINAL RESPONSE FORMAT:
 After the save tool returns success, you MUST generate this exact response:
 
-"SUCCESS: Resume content processed and JSON structured.
-
-JSON_RESUME:
-<INSERT THE COMPLETE VALID JSON STRING GENERATED IN STEP 2>"
+"SUCCESS: Resume content processed and structured dict saved to session state."
 """,
         tools=[
-            save_json_resume_to_session,
+            save_resume_dict_to_session,
         ],
     )
 

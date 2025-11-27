@@ -78,8 +78,10 @@ Wait for the response and store the resume text content.
 Call the read_file tool with path="job_description.md"
 Wait for the response and store the job description text content.
 
-**STEP 3: CHECK FOR FILE READ ERRORS**
+**STEP 3: CHECK FOR FILE READ ERRORS AND CONTINUE**
 If either file read failed, log the error and return "ERROR: [application_documents_agent] <INSERT FULL FILE READ ERROR MESSAGE HERE>" to the parent agent and stop.
+If files loaded successfully: YOU MUST IMMEDIATELY CONTINUE TO STEP 4
+DO NOT STOP after loading files - this is only the beginning of the workflow
 
 **STEP 4: INGEST RESUME (REQUIRED - DO NOT SKIP)**
 Once you have the full text content of 'resume.md', you MUST immediately call the resume_ingest_agent.
@@ -87,10 +89,11 @@ Once you have the full text content of 'resume.md', you MUST immediately call th
   * resume: The complete text content from resume.md file
 - DO NOT proceed until you call this agent
 
-**STEP 5: CHECK RESUME INGEST RESPONSE**
+**STEP 5: CHECK RESUME INGEST RESPONSE AND CONTINUE**
 Check the response from resume_ingest_agent for the keyword "ERROR:"
    - If "ERROR:" is present: Log error and return "ERROR: [application_documents_agent] -> <INSERT FULL ERROR MESSAGE FROM resume_ingest_agent>" to parent agent and stop
-   - If "ERROR:" is not present: Extract the JSON from the response by locating the "JSON_RESUME:" keyword and extracting everything after it
+   - If "SUCCESS:" is present: YOU MUST IMMEDIATELY CONTINUE TO STEP 6
+   - The resume dict has been saved to session state by the ingest agent
 
 **STEP 6: INGEST JOB DESCRIPTION (REQUIRED - DO NOT SKIP)**
 Once you have the full text content of 'job_description.md', you MUST immediately call the job_description_ingest_agent.
@@ -98,13 +101,16 @@ Once you have the full text content of 'job_description.md', you MUST immediatel
   * job_description: The complete text content from job_description.md file
 - DO NOT proceed until you call this agent
 
-**STEP 7: CHECK JOB DESCRIPTION INGEST RESPONSE**
+**STEP 7: CHECK JOB DESCRIPTION INGEST RESPONSE AND CONTINUE**
 Check the response from job_description_ingest_agent for the keyword "ERROR:"
    - If "ERROR:" is present: Log error and return "ERROR: [application_documents_agent] -> <INSERT FULL ERROR MESSAGE FROM job_description_ingest_agent>" to parent agent and stop
-   - If "ERROR:" is not present: Extract the JSON from the response by locating the "JSON_JOB_DESCRIPTION:" keyword and extracting everything after it
+   - If "SUCCESS:" is present: YOU MUST IMMEDIATELY CONTINUE TO STEP 8
+   - The job description dict has been saved to session state by the ingest agent
 
-**STEP 8: RETURN BOTH JSON OBJECTS (FINAL STEP)**
-RETURN BOTH extracted JSON objects in your final response. This is the final step - you MUST complete all previous steps before reaching here.
+**STEP 8: RETURN SUCCESS MESSAGE (FINAL STEP) - MANDATORY**
+This is the FINAL step. You MUST execute this step to complete the workflow.
+DO NOT RETURN None. DO NOT STOP without generating a response.
+RETURN a success message confirming both documents have been processed and saved to session state.
 
 ERROR HANDLING:
 This is a Coordinator Agent. Follow the ADK three-layer pattern:
@@ -119,26 +125,14 @@ When using tools (read_file):
 
 Log all errors before returning them to parent agent.
 
-CRITICAL JSON EXTRACTION:
-The ingest agents return text responses that include the JSON data. You MUST:
-- Look for the JSON data in their response text
-- Extract the complete JSON object (everything between the outermost curly braces)
-- Include both JSON objects in your final response text
-
 MANDATORY FINAL RESPONSE FORMAT:
-After all tools complete successfully, you MUST return BOTH JSON objects in your response.
+After all tools complete successfully, you MUST return a success message.
 
 Use this EXACT format:
-"SUCCESS: Both documents have been loaded and processed.
+"SUCCESS: Both documents have been loaded, processed, and saved to session state."
 
-JSON_RESUME:
-<INSERT THE COMPLETE JSON RESUME HERE>
-
-JSON_JOB_DESCRIPTION:
-<INSERT THE COMPLETE JSON JOB DESCRIPTION HERE>"
-
-This format is CRITICAL - the parent agent will extract these JSON objects from your response.
-Do NOT summarize or truncate the JSON - return the COMPLETE JSON objects.
+The parent agent will NOT extract data from your response - the data is already in session state.
+Do NOT include JSON in your response - it's already in session state.
 
 Always pass complete text content to ingest agents as parameters, not variable names.
 Use the canonical 'read_file' tool name for MCP filesystem operations.

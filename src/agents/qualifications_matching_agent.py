@@ -4,6 +4,7 @@ Implements session state pattern for data sharing between agents.
 """
 
 import json
+from typing import List, Dict, Any
 from google.adk.agents import LlmAgent
 from google.adk.models.google_llm import Gemini
 from google.adk.tools import AgentTool
@@ -12,7 +13,7 @@ from google.genai import types
 from src.config.model_config import GEMINI_FLASH_MODEL, retry_config, GOOGLE_API_KEY
 
 
-def save_quality_matches_to_session(tool_context: ToolContext, quality_matches: list) -> dict:
+def save_quality_matches_to_session(tool_context: ToolContext, quality_matches: List[Dict[str, Any]]) -> dict:
     """Save quality matches list to session state.
 
     Args:
@@ -40,7 +41,7 @@ def save_quality_matches_to_session(tool_context: ToolContext, quality_matches: 
         }
 
 
-def save_possible_matches_to_session(tool_context: ToolContext, possible_quality_matches: list) -> dict:
+def save_possible_matches_to_session(tool_context: ToolContext, possible_quality_matches: List[Dict[str, Any]]) -> dict:
     """Save possible quality matches list to session state.
 
     Args:
