@@ -13,27 +13,26 @@ from google.adk.tools.tool_context import ToolContext
 from src.config.model_config import GEMINI_FLASH_MODEL, retry_config, GOOGLE_API_KEY
 
 
-def save_resume_to_session(tool_context: ToolContext, json_resume: str) -> dict:
-    """Save resume JSON to session state.
+def save_resume_to_session(tool_context: ToolContext, resume_dict: dict) -> dict:
+    """Save resume dict to session state.
 
     Args:
         tool_context: ADK tool context with state access
-        json_resume: JSON string containing structured resume data
+        resume_dict: Dictionary containing structured resume data
 
     Returns:
         Dictionary with status and message
     """
     try:
-        resume_data = json.loads(json_resume)
-        tool_context.state['json_resume'] = json_resume
+        if not isinstance(resume_dict, dict):
+            return {
+                "status": "error",
+                "message": "resume_dict must be a dictionary"
+            }
+        tool_context.state['resume_dict'] = resume_dict
         return {
             "status": "success",
-            "message": "Resume JSON saved to session state"
-        }
-    except json.JSONDecodeError as e:
-        return {
-            "status": "error",
-            "message": f"Invalid resume JSON format: {str(e)}"
+            "message": "Resume dict saved to session state"
         }
     except Exception as e:
         return {
@@ -42,27 +41,26 @@ def save_resume_to_session(tool_context: ToolContext, json_resume: str) -> dict:
         }
 
 
-def save_job_description_to_session(tool_context: ToolContext, json_job_description: str) -> dict:
-    """Save job description JSON to session state.
+def save_job_description_to_session(tool_context: ToolContext, job_description_dict: dict) -> dict:
+    """Save job description dict to session state.
 
     Args:
         tool_context: ADK tool context with state access
-        json_job_description: JSON string containing structured job description data
+        job_description_dict: Dictionary containing structured job description data
 
     Returns:
         Dictionary with status and message
     """
     try:
-        jd_data = json.loads(json_job_description)
-        tool_context.state['json_job_description'] = json_job_description
+        if not isinstance(job_description_dict, dict):
+            return {
+                "status": "error",
+                "message": "job_description_dict must be a dictionary"
+            }
+        tool_context.state['job_description_dict'] = job_description_dict
         return {
             "status": "success",
-            "message": "Job Description JSON saved to session state"
-        }
-    except json.JSONDecodeError as e:
-        return {
-            "status": "error",
-            "message": f"Invalid job description JSON format: {str(e)}"
+            "message": "Job Description dict saved to session state"
         }
     except Exception as e:
         return {
@@ -123,18 +121,19 @@ Step 2: CHECK FOR ERRORS
 - If "ERROR:" is present: Log the error, Return "ERROR: [job_application_agent] -> <INSERT FULL ERROR MESSAGE FROM application_documents_agent>", and stop
 - If "ERROR:" is not present: Continue to step 3
 
-Step 3: EXTRACT JSON DATA
+Step 3: EXTRACT DICT DATA
 - Look for JSON_RESUME and JSON_JOB_DESCRIPTION in the response
 - Extract the complete JSON objects (everything between the outermost curly braces)
-- If extraction fails: Log error, Return "ERROR: [job_application_agent] Failed to extract JSON data", and stop
+- Parse each JSON string into a Python dictionary
+- If extraction or parsing fails: Log error, Return "ERROR: [job_application_agent] Failed to extract dict data", and stop
 
-Step 4: SAVE RESUME JSON TO SESSION STATE
-- Call save_resume_to_session with json_resume parameter only
+Step 4: SAVE RESUME DICT TO SESSION STATE
+- Call save_resume_to_session with resume_dict parameter only (pass the Python dict, not a JSON string)
 - Note: ADK framework automatically provides tool_context - do not pass it explicitly
 - If the tool response indicates "error": Log the error and return "ERROR: [job_application_agent] <INSERT ERROR MESSAGE FROM TOOL>", then STOP
 
-Step 5: SAVE JOB DESCRIPTION JSON TO SESSION STATE
-- Call save_job_description_to_session with json_job_description parameter only
+Step 5: SAVE JOB DESCRIPTION DICT TO SESSION STATE
+- Call save_job_description_to_session with job_description_dict parameter only (pass the Python dict, not a JSON string)
 - Note: ADK framework automatically provides tool_context - do not pass it explicitly
 - If the tool response indicates "error": Log the error and return "ERROR: [job_application_agent] <INSERT ERROR MESSAGE FROM TOOL>", then STOP
 
@@ -154,7 +153,7 @@ Step 8: RETURN FINAL OPTIMIZED RESUME
 DELEGATION PATTERN:
 - Use application_documents_agent for all file loading and ingestion
 - Use resume_refiner_agent for all resume optimization work
-- Save JSON data to session state for downstream agents to access
+- Save Python dict data to session state for downstream agents to access
 - Call agents with simple requests, not complex parameters
 - You coordinate the overall workflow but do not perform the actual work
 
@@ -183,7 +182,7 @@ When calling sub-agents:
 
 Error detection pattern:
 - application_documents_agent response contains "ERROR:" → Stop and Return "ERROR: [job_application_agent] -> <INSERT ERROR MESSAGE FROM CHILD>"
-- JSON extraction fails → Log, Return "ERROR: [job_application_agent] Failed to extract JSON data", stop
+- Dict extraction/parsing fails → Log, Return "ERROR: [job_application_agent] Failed to extract dict data", stop
 - save tool returns error status → Log, Return "ERROR: [job_application_agent] <INSERT ERROR MESSAGE FROM TOOL>", stop
 - resume_refiner_agent response contains "ERROR:" → Stop and Return "ERROR: [job_application_agent] -> <INSERT ERROR MESSAGE FROM CHILD>"
 

@@ -99,17 +99,16 @@ FOCUS: Highlighting and Pruning (Not Rewriting)
 
 WORKFLOW:
 
-Step 1: RECEIVE AND VALIDATE INPUT PARAMETERS
-- You will receive five required parameters from the Qualifications Matching Agent:
-  * json_resume: JSON string containing original resume structure (for creation)
-  * json_job_description: JSON string containing job requirements (for matching/pruning)
-  * quality_matches: JSON string containing validated matches with job_id context
-  * resume: The original resume text (for fidelity checking)
-  * job_description: The original job description text (for context)
-- Check if all five parameters are present and non-empty
-- If any parameter is missing or empty:
+Step 1: READ FROM SESSION STATE
+- Read all required data from session state:
+  * resume_dict = state.get('resume_dict')  - Python dict containing original resume structure
+  * job_description_dict = state.get('job_description_dict')  - Python dict containing job requirements
+  * quality_matches = state.get('quality_matches')  - Python list containing validated matches with job_id context
+- These are Python objects - access data directly (no parsing needed)
+- Check if all three are present and non-empty
+- If any is missing or empty:
   * Log the error
-  * Return "ERROR: [resume_writing_agent] Missing required input parameters"
+  * Return "ERROR: [resume_writing_agent] Missing required data in session state"
   * Stop processing
 
 Step 2: DETERMINE ITERATION NUMBER
@@ -134,7 +133,7 @@ Step 4: ANALYZE QUALITY_MATCHES FOR RELEVANT JOBS
 
 Step 5: CREATE OPTIMIZED RESUME CANDIDATE
 
-Follow json_resume structure EXACTLY. If uncertain about structure or field requirements, reference src/schemas/resume_schema_core.json for clarification.
+Follow resume_dict structure EXACTLY. If uncertain about structure or field requirements, reference src/schemas/resume_schema_core.json for clarification.
 
 A. PRESERVE THESE FIELDS AS-IS (No Modifications):
    - contact_info (all fields)
@@ -206,7 +205,7 @@ Step 6: INCORPORATE CRITIC FEEDBACK (Iterations 2-5 Only)
 - Apply feedback while maintaining principles (no rephrasing/adding)
 
 Step 7: VALIDATE OUTPUT
-- Ensure structure matches json_resume exactly
+- Ensure structure matches resume_dict exactly
 - Verify no text was rephrased or modified
 - Confirm job_id sequence unchanged (job_001 = oldest)
 - Check chronological order maintained (newest first)
@@ -221,16 +220,11 @@ Step 8: SAVE TO SESSION STATE
 - If status is "error": Log the error and return "ERROR: [resume_writing_agent] -> <INSERT ERROR MESSAGE FROM TOOL>" to parent agent and stop
 - If status is "success": Continue to Step 9
 
-Step 9: PASS TORCH TO RESUME CRITIC AGENT WITH EXPLICIT PARAMETERS
-- Call resume_critic_agent with explicit parameters:
-  * iteration_number: Current iteration number string ("01" through "05")
-  * resume_candidate_json: The candidate JSON from Step 8
-  * json_resume: Original resume (for fidelity checking)
-  * json_job_description: Job description (for context)
-  * quality_matches: Quality matches (for validation)
-  * resume: The original resume text (for fidelity/fabrication checks)
-  * job_description: The original job description text (for context)
-- Resume Critic Agent will review the candidate and either:
+Step 9: PASS TORCH TO RESUME CRITIC AGENT WITH SIMPLE REQUEST
+- Call resume_critic_agent with a SIMPLE request parameter:
+  "Please review the resume candidate iteration XX" (where XX is the iteration number)
+- DO NOT pass data as parameters - it is already in session state
+- Resume Critic Agent will read from session state and either:
   * Finalize it (if no issues) and return optimized resume
   * Call Resume Writing Agent again with feedback (iterations 2-5)
 - Check the response for the keyword "ERROR:"
@@ -254,10 +248,10 @@ If `resume_critic_agent` returns None or empty content, immediately report:
 ERROR HANDLING:
 This is a Coordinator Agent. Follow the ADK three-layer pattern:
 
-Parameter Validation:
-- If json_resume, json_job_description, quality_matches, resume, or job_description parameters are missing or empty:
+Session State Validation:
+- If resume_dict, job_description_dict, or quality_matches is missing from session state:
   * Log error
-  * Return "ERROR: [resume_writing_agent] Missing required input parameters"
+  * Return "ERROR: [resume_writing_agent] Missing required data in session state"
   * Stop
 
 When using tools (save_resume_candidate_to_session):
@@ -285,7 +279,7 @@ Log all errors before returning them to parent agent.
 CRITICAL PRINCIPLES:
 1. HIGH FIDELITY: Preserve ALL original wording (no rephrasing)
 2. NO FABRICATION: Never add achievements, experiences, or qualifications not in original
-3. STRUCTURE PRESERVATION: Follow json_resume structure exactly
+3. STRUCTURE PRESERVATION: Follow resume_dict structure exactly
 4. HIGHLIGHTING THROUGH ORDERING: Emphasis via achievement order, not rewriting
 5. CONSERVATIVE PRUNING: Only remove obviously irrelevant certifications
 6. JOB_ID IMMUTABLE: Never change job_id sequence (job_001 = oldest always)
@@ -302,7 +296,7 @@ WHAT NOT TO DO:
 - DO NOT fabricate qualifications
 
 STRUCTURE TEMPLATE:
-Use json_resume from session state as your template. Match its structure exactly. Reference src/schemas/resume_schema_core.json if uncertain about any field requirements.
+Use resume_dict from session state as your template. Match its structure exactly. Reference src/schemas/resume_schema_core.json if uncertain about any field requirements.
 """,
         tools=[
             save_resume_candidate_to_session,

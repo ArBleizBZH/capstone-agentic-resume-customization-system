@@ -12,19 +12,17 @@ from google.genai import types
 from src.config.model_config import GEMINI_FLASH_MODEL, retry_config, GOOGLE_API_KEY
 
 
-def save_quality_matches_to_session(tool_context: ToolContext, matches_json: str) -> dict:
+def save_quality_matches_to_session(tool_context: ToolContext, quality_matches: list) -> dict:
     """Save quality matches to session state.
 
     Args:
         tool_context: ADK tool context with state access
-        matches_json: JSON string containing list of quality matches
+        quality_matches: List containing quality match objects
 
     Returns:
         Dictionary with status and message
     """
     try:
-        quality_matches = json.loads(matches_json)
-
         if not isinstance(quality_matches, list):
             return {
                 "status": "error",
@@ -39,11 +37,6 @@ def save_quality_matches_to_session(tool_context: ToolContext, matches_json: str
             "match_count": len(quality_matches)
         }
 
-    except json.JSONDecodeError as e:
-        return {
-            "status": "error",
-            "message": f"Invalid JSON format: {str(e)}"
-        }
     except Exception as e:
         return {
             "status": "error",
@@ -51,38 +44,31 @@ def save_quality_matches_to_session(tool_context: ToolContext, matches_json: str
         }
 
 
-def save_possible_matches_to_session(tool_context: ToolContext, matches_json: str) -> dict:
+def save_possible_matches_to_session(tool_context: ToolContext, possible_quality_matches: list) -> dict:
     """Save possible quality matches to session state (for internal processing).
 
     Args:
         tool_context: ADK tool context with state access
-        matches_json: JSON string containing list of possible matches
+        possible_quality_matches: List containing possible match objects
 
     Returns:
         Dictionary with status and message
     """
     try:
-        possible_matches = json.loads(matches_json)
-
-        if not isinstance(possible_matches, list):
+        if not isinstance(possible_quality_matches, list):
             return {
                 "status": "error",
                 "message": "possible_quality_matches must be a list"
             }
 
-        tool_context.state["possible_quality_matches"] = possible_matches
+        tool_context.state["possible_quality_matches"] = possible_quality_matches
 
         return {
             "status": "success",
-            "message": f"Saved {len(possible_matches)} possible matches to session state for validation",
-            "match_count": len(possible_matches)
+            "message": f"Saved {len(possible_quality_matches)} possible matches to session state for validation",
+            "match_count": len(possible_quality_matches)
         }
 
-    except json.JSONDecodeError as e:
-        return {
-            "status": "error",
-            "message": f"Invalid JSON format: {str(e)}"
-        }
     except Exception as e:
         return {
             "status": "error",
@@ -133,18 +119,18 @@ WORKFLOW:
 
 Step 1: READ FROM SESSION STATE
 - Read all data from session state:
-  * json_resume = state.get('json_resume')
-  * json_job_description = state.get('json_job_description')
-  * quality_matches_json = state.get('quality_matches')
-  * possible_matches_json = state.get('possible_matches')
-- Parse the JSON strings to access the data
+  * resume_dict = state.get('resume_dict')
+  * job_description_dict = state.get('job_description_dict')
+  * quality_matches = state.get('quality_matches')
+  * possible_quality_matches = state.get('possible_quality_matches')
+- These are Python objects (dicts and lists) - access data directly (no parsing needed)
 - If any required data is missing or empty:
   * Log the error
   * Return "ERROR: [qualifications_checker_agent] Missing required data in session state"
   * Stop processing
 
 Step 2: VERIFY AND REFINE MATCHES
-- Parse possible_matches_json and quality_matches_json into lists
+- You now have quality_matches and possible_quality_matches as Python lists
 - CRITICAL: Iterate through every item in possible_quality_matches
 - Apply a HIGH THRESHOLD of validation (virtual certainty required)
 - If validated, move the match to the quality_matches list
@@ -152,14 +138,13 @@ Step 2: VERIFY AND REFINE MATCHES
 - The final quality_matches list should be the union of the original quality matches and the verified possible matches
 
 Step 3: SAVE QUALITY_MATCHES TO SESSION STATE
-- Convert quality_matches list to JSON string
-- Call save_quality_matches_to_session with matches_json parameter only
+- Call save_quality_matches_to_session with quality_matches parameter only (pass the Python list directly, not JSON)
 - Note: ADK framework automatically provides tool_context - do not pass it explicitly
 - If the tool response indicates "error": Log the error and return "ERROR: [qualifications_checker_agent] <INSERT ERROR MESSAGE FROM TOOL>" to the parent agent, then STOP.
 
 Step 4: SAVE POSSIBLE_QUALITY_MATCHES TO SESSION STATE
-- Convert the final, empty possible_matches list (after verification and discarding) to the JSON string "[]"
-- Call save_possible_matches_to_session with "[]" parameter only
+- The final, empty possible_quality_matches list (after verification and discarding) should be an empty Python list []
+- Call save_possible_matches_to_session with possible_quality_matches parameter only (pass the empty Python list directly, not JSON)
 - Note: ADK framework automatically provides tool_context - do not pass it explicitly
 - If the tool response indicates "error": Log the error and return "ERROR: [qualifications_checker_agent] <INSERT ERROR MESSAGE FROM TOOL>" to the parent agent, then STOP.
 - If the tool response is "success": DO NOT STOP. Immediately proceed to Step 5.
@@ -185,7 +170,7 @@ ERROR HANDLING:
 This is a Coordinator Agent. Follow the ADK three-layer pattern:
 
 Session State Validation:
-- If quality_matches, possible_matches, json_resume, or json_job_description is missing from session state:
+- If quality_matches, possible_quality_matches, resume_dict, or job_description_dict is missing from session state:
   * Log error
   * Return "ERROR: [qualifications_checker_agent] Missing required data in session state"
   * Stop

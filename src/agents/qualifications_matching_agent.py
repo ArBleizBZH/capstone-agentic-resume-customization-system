@@ -12,32 +12,26 @@ from google.genai import types
 from src.config.model_config import GEMINI_FLASH_MODEL, retry_config, GOOGLE_API_KEY
 
 
-def save_quality_matches_to_session(tool_context: ToolContext, matches_json: str) -> dict:
+def save_quality_matches_to_session(tool_context: ToolContext, quality_matches: list) -> dict:
     """Save quality matches list to session state.
 
     Args:
         tool_context: ADK tool context with state access
-        matches_json: JSON string containing list of quality matches
+        quality_matches: List containing quality match objects
 
     Returns:
         Dictionary with status and message
     """
     try:
-        quality_matches = json.loads(matches_json)
         if not isinstance(quality_matches, list):
             return {
                 "status": "error",
                 "message": "quality_matches must be a list"
             }
-        tool_context.state['quality_matches'] = matches_json
+        tool_context.state['quality_matches'] = quality_matches
         return {
             "status": "success",
             "message": f"Saved {len(quality_matches)} quality matches to session state"
-        }
-    except json.JSONDecodeError as e:
-        return {
-            "status": "error",
-            "message": f"Invalid JSON format: {str(e)}"
         }
     except Exception as e:
         return {
@@ -46,32 +40,26 @@ def save_quality_matches_to_session(tool_context: ToolContext, matches_json: str
         }
 
 
-def save_possible_matches_to_session(tool_context: ToolContext, matches_json: str) -> dict:
-    """Save possible matches list to session state.
+def save_possible_matches_to_session(tool_context: ToolContext, possible_quality_matches: list) -> dict:
+    """Save possible quality matches list to session state.
 
     Args:
         tool_context: ADK tool context with state access
-        matches_json: JSON string containing list of possible matches
+        possible_quality_matches: List containing possible match objects
 
     Returns:
         Dictionary with status and message
     """
     try:
-        possible_matches = json.loads(matches_json)
-        if not isinstance(possible_matches, list):
+        if not isinstance(possible_quality_matches, list):
             return {
                 "status": "error",
-                "message": "possible_matches must be a list"
+                "message": "possible_quality_matches must be a list"
             }
-        tool_context.state['possible_matches'] = matches_json
+        tool_context.state['possible_quality_matches'] = possible_quality_matches
         return {
             "status": "success",
-            "message": f"Saved {len(possible_matches)} possible matches to session state"
-        }
-    except json.JSONDecodeError as e:
-        return {
-            "status": "error",
-            "message": f"Invalid JSON format: {str(e)}"
+            "message": f"Saved {len(possible_quality_matches)} possible matches to session state"
         }
     except Exception as e:
         return {
@@ -117,9 +105,9 @@ WORKFLOW:
 
 Step 1: READ FROM SESSION STATE
 - Read the resume and job description from session state:
-  * json_resume = state.get('json_resume')
-  * json_job_description = state.get('json_job_description')
-- Parse these JSON strings to access the data
+  * resume_dict = state.get('resume_dict')
+  * job_description_dict = state.get('job_description_dict')
+- These are Python dictionaries - access data directly (no parsing needed)
 - If either is missing or empty:
   * Log the error
   * Return "ERROR: [qualifications_matching_agent] Missing resume or job description in session state"
@@ -158,14 +146,12 @@ Each match object MUST have:
 **IMPORTANT**: Preserve job_id context in resume_source (e.g., "job_001.job_technologies")
 
 Step 3: SAVE QUALITY MATCHES TO SESSION STATE
-- Convert quality_matches list to JSON string
-- Call save_quality_matches_to_session with matches_json parameter only
+- Call save_quality_matches_to_session with quality_matches parameter only (pass the Python list directly, not JSON)
 - Note: ADK framework automatically provides tool_context - do not pass it explicitly
 - If the tool response indicates "error": Log the error and return "ERROR: [qualifications_matching_agent] <INSERT ERROR MESSAGE FROM TOOL>" to parent agent, then STOP
 
 Step 4: SAVE POSSIBLE MATCHES TO SESSION STATE
-- Convert possible_matches list to JSON string
-- Call save_possible_matches_to_session with matches_json parameter only
+- Call save_possible_matches_to_session with possible_quality_matches parameter only (pass the Python list directly, not JSON)
 - Note: ADK framework automatically provides tool_context - do not pass it explicitly
 - If the tool response indicates "error": Log the error and return "ERROR: [qualifications_matching_agent] <INSERT ERROR MESSAGE FROM TOOL>" to parent agent, then STOP
 
@@ -188,7 +174,7 @@ If `qualifications_checker_agent` returns None or empty content, immediately rep
 ERROR HANDLING:
 
 When reading from session state:
-- If json_resume or json_job_description is missing:
+- If resume_dict or job_description_dict is missing:
   * Log error
   * Return "ERROR: [qualifications_matching_agent] Missing resume or job description in session state"
   * Stop

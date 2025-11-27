@@ -51,8 +51,8 @@ WORKFLOW:
 
 Step 1: VERIFY SESSION STATE
 - Check that session state contains the required data:
-  * state.get('json_resume') should not be None
-  * state.get('json_job_description') should not be None
+  * state.get('resume_dict') should not be None
+  * state.get('job_description_dict') should not be None
 - If either is missing:
   * Log the error
   * Return "ERROR: [resume_refiner_agent] Missing required data in session state"
@@ -95,7 +95,7 @@ ERROR HANDLING:
 This is a Coordinator Agent. Follow the ADK three-layer pattern:
 
 Session State Validation:
-- If json_resume or json_job_description is missing from session state:
+- If resume_dict or job_description_dict is missing from session state:
   * Log error
   * Return "ERROR: [resume_refiner_agent] Missing required data in session state"
   * Stop
@@ -111,7 +111,7 @@ When calling sub-agents (qualifications_matching_agent):
 Log all errors before returning them to parent agent.
 
 CRITICAL PRINCIPLES:
-- SESSION STATE: Read JSON documents from session state (written by parent agent)
+- SESSION STATE: Read Python dict documents from session state (written by parent agent)
 - SIMPLE DELEGATION: Call matching agent with simple request, not complex parameters
 - ERROR CHAINING: Prepend agent name to errors for debug traceability
 - LIGHTWEIGHT DESIGN: Pure delegation, no data transformation
