@@ -80,24 +80,13 @@ def save_possible_matches_to_session(tool_context: ToolContext, possible_quality
 def create_qualifications_checker_agent():
     """Create and return the Qualifications Checker Agent.
 
-    This agent coordinates saving matches to session state and delegating to Resume Writing Agent.
-    Pure coordinator - receives matches from Qualifications Matching Agent, saves them, passes to Resume Writing Agent.
+    This agent validates preliminary matches from the Qualifications Matching Agent,
+    verifies inferred matches with high threshold, and finalizes the quality_matches list
+    in session state.
 
     Returns:
         LlmAgent: The configured Qualifications Checker Agent
     """
-
-    # Import Resume Writing Agent for delegation
-    from src.agents.resume_writing_agent import create_resume_writing_agent
-    from src.agents.resume_critic_agent import create_resume_critic_agent
-
-    # Create both agents for write-critique loop
-    resume_writing_agent = create_resume_writing_agent()
-    resume_critic_agent = create_resume_critic_agent()
-
-    # Wire them together to enable write-critique loop
-    resume_writing_agent.tools.append(AgentTool(agent=resume_critic_agent))
-    resume_critic_agent.tools.append(AgentTool(agent=resume_writing_agent))
 
     agent = LlmAgent(
         name="qualifications_checker_agent",
@@ -113,8 +102,8 @@ def create_qualifications_checker_agent():
                 )
             )
         ),
-        description="Coordinates saving qualification matches and delegating to Resume Writing Agent.",
-        instruction="""You are the Qualifications Checker Agent, responsible for coordinating the workflow from matching to resume writing.
+        description="Validates and finalizes qualification matches by verifying inferred matches with high threshold.",
+        instruction="""You are the Qualifications Checker Agent, responsible for validating preliminary matches and finalizing the quality_matches list.
 
 WORKFLOW:
 
@@ -150,25 +139,23 @@ Step 4: SAVE POSSIBLE_QUALITY_MATCHES TO SESSION STATE
 - If the tool response indicates "error": Log the error and return "ERROR: [qualifications_checker_agent] <INSERT ERROR MESSAGE FROM TOOL>" to the parent agent, then STOP.
 - If the tool response is "success": DO NOT STOP. Immediately proceed to Step 5.
 
-Step 5: CALL RESUME WRITING AGENT AND RETURN ITS RESPONSE
-- Call resume_writing_agent with a SIMPLE request parameter:
-  "Please write an optimized resume based on the qualification matches"
-- DO NOT pass JSON data or match data as parameters - it is already in session state
-- The Resume Writing Agent will read from session state
+Step 5: RETURN SUCCESS MESSAGE - CRITICAL
+After both save tools complete successfully, you MUST generate a final text response.
+**DO NOT RETURN None** or empty content.
+**DO NOT STOP** after the tool calls without generating this response.
 
-CRITICAL FINAL STEP - MANDATORY TEXT RESPONSE:
-After calling resume_writing_agent, you MUST generate a text response.
-**DO NOT RETURN None** - this will break the workflow.
-**DO NOT STOP** after the tool call without generating this response.
+MANDATORY FINAL RESPONSE FORMAT:
+"SUCCESS: Validated and finalized qualification matches.
 
-Your final response MUST contain the EXACT, COMPLETE text returned by `resume_writing_agent`.
-Simply echo/relay the writing agent's response - do not summarize, modify, or add your own text.
+VALIDATION SUMMARY:
+- Final quality matches: XX (verified with high confidence)
+- Possible matches processed: XX validated, XX discarded
+- Validation threshold: Virtual certainty required
 
-If `resume_writing_agent` returns None or empty content, immediately report:
-"ERROR: [qualifications_checker_agent] -> Resume Writing Agent returned no content"
+Quality matches list finalized and saved to session state."
 
 ERROR HANDLING:
-This is a Coordinator Agent. Follow the ADK three-layer pattern:
+This is a Worker Agent. Follow the ADK three-layer pattern:
 
 Session State Validation:
 - If quality_matches, possible_quality_matches, resume_dict, or job_description_dict is missing from session state:
@@ -183,33 +170,22 @@ When using tools (save functions):
   * Return "ERROR: [qualifications_checker_agent] <INSERT ERROR MESSAGE FROM TOOL>"
   * Stop
 
-When calling sub-agents (resume_writing_agent):
-- Check sub-agent response for the keyword "ERROR:"
-- If "ERROR:" is found:
-  * Log error
-  * Prepend agent name to create error chain
-  * Return "ERROR: [qualifications_checker_agent] -> <INSERT ERROR FROM CHILD AGENT>"
-  * Stop
-
 For validation errors during processing:
-- If malformed JSON structures: Log error, return "ERROR: [qualifications_checker_agent] Invalid JSON structure in input data" to parent agent, and stop
+- If malformed data structures: Log error, return "ERROR: [qualifications_checker_agent] Invalid data structure in input" to parent agent, and stop
 - If verification logic fails: Log error, return "ERROR: [qualifications_checker_agent] Verification process failed" to parent agent, and stop
 
 Log all errors before returning them to parent agent.
 
 CRITICAL PRINCIPLES:
-1. VERIFICATION COORDINATION: You receive preliminary matches from Qualifications Matching Agent, execute the verification logic, save the FINAL match lists, and then delegate to the Resume Writing Agent.
-2. SEQUENTIAL EXECUTION: Complete all save operations before calling resume_writing_agent
-3. RETURN WRITING AGENT OUTPUT: Your final output is the resume_writing_agent's response - DO NOT RETURN None
-4. NO PREMATURE STOPPING: Do not return None after tool calls - continue to next step
+1. VERIFICATION WORKER: You receive preliminary matches, execute verification logic, save FINAL match lists
+2. SEQUENTIAL EXECUTION: Complete all save operations before returning
+3. RETURN SUCCESS MESSAGE: Your final output is a success message - DO NOT RETURN None
+4. NO PREMATURE STOPPING: Do not return None after tool calls - continue to generate final response
+5. YOU ARE A WORKER: You do NOT call other agents - parent orchestrator (Resume Refiner) calls the next agent
 """,
         tools=[
             save_quality_matches_to_session,
             save_possible_matches_to_session,
-            AgentTool(agent=resume_writing_agent),
-        ],
-        sub_agents=[
-            resume_writing_agent,
         ],
     )
 

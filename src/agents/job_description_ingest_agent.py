@@ -1,4 +1,4 @@
-"""Job Description Ingest Agent - Converts job description text to structured JSON.
+"""Job Description Ingest Agent - Converts job description text to structured python dict.
 
 Based on Day 2a notebook patterns for LlmAgent with tool functions.
 """
@@ -98,8 +98,8 @@ Your Goal: Convert job description text into a structured Python dictionary with
 WORKFLOW:
 
 1. **RECEIVE CONTENT**: You will receive job description text as the 'job_description' parameter.
-2. **PARSE TO DICT**: Extract and structure the content into a Python dictionary following the required schema (job_info, responsibilities, qualifications, benefits).
-3. **SAVE TO SESSION**: Call `save_job_description_dict_to_session` with the Python dictionary.
+2. **PARSE TO DICT**: Extract and structure the content into a Python dictionary named 'job_description_dict' and following the required schema (job_info, responsibilities, qualifications, benefits).
+3. **SAVE TO SESSION**: Call `save_job_description_dict_to_session` with 'job_description_dict' as parameter.
 4. **GENERATE FINAL RESPONSE**: After the save tool completes successfully, you MUST generate a simple text response.
 
 **CRITICAL**: Steps 3 and 4 are BOTH required. Do NOT stop after calling the save tool.

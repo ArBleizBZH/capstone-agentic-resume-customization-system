@@ -67,9 +67,7 @@ def create_resume_writing_agent():
 
     This agent creates optimized resume candidates by reordering achievements and pruning
     irrelevant content, maintaining high fidelity to original resume.
-    Focus on highlighting and pruning. Gen2: Will add rephrasing with Claude Sonnet 4.5.
-
-    NOTE: Resume Critic Agent will be added to tools after creation to avoid circular dependency.
+    Focus on highlighting and pruning achievements.
 
     Returns:
         LlmAgent: The configured Resume Writing Agent
@@ -217,36 +215,28 @@ Step 8: SAVE TO SESSION STATE
 - Call save_resume_candidate_to_session with candidate_json and iteration_number parameters only
 - Note: ADK framework automatically provides tool_context - do not pass it explicitly
 - Check the tool response for status: "error"
-- If status is "error": Log the error and return "ERROR: [resume_writing_agent] -> <INSERT ERROR MESSAGE FROM TOOL>" to parent agent and stop
+- If status is "error": Log the error and return "ERROR: [resume_writing_agent] <INSERT ERROR MESSAGE FROM TOOL>" to parent agent and stop
 - If status is "success": Continue to Step 9
 
-Step 9: PASS TORCH TO RESUME CRITIC AGENT WITH SIMPLE REQUEST
-- Call resume_critic_agent with a SIMPLE request parameter:
-  "Please review the resume candidate iteration XX" (where XX is the iteration number)
-- DO NOT pass data as parameters - it is already in session state
-- Resume Critic Agent will read from session state and either:
-  * Finalize it (if no issues) and return optimized resume
-  * Call Resume Writing Agent again with feedback (iterations 2-5)
-- Check the response for the keyword "ERROR:"
-- If "ERROR:" is present:
-  * Log the error
-  * Prepend agent name to create error chain
-  * Return "ERROR: [resume_writing_agent] -> <INSERT ERROR MESSAGE FROM RESUME CRITIC AGENT>"
-  * Stop processing
+Step 9: RETURN SUCCESS MESSAGE - CRITICAL
+After the save tool completes successfully, you MUST generate a final text response.
+**DO NOT RETURN None** or empty content.
+**DO NOT STOP** after the tool call without generating this response.
 
-CRITICAL FINAL RESPONSE:
-After calling resume_critic_agent, you MUST generate a final text response.
-**DO NOT RETURN None** - this will break the workflow.
-**DO NOT STOP** after the critic call without generating this response.
+MANDATORY FINAL RESPONSE FORMAT:
+"SUCCESS: Created resume candidate iteration XX and saved to session state.
 
-Your final response MUST contain the EXACT, COMPLETE text returned by `resume_critic_agent`.
-Simply echo/relay the critic's response - do not summarize or modify it.
+CANDIDATE SUMMARY:
+- Iteration: XX
+- Session key: resume_candidate_XX
+- Achievements reordered: [number] jobs with matched qualifications
+- Certifications pruned: [number] irrelevant certifications removed
+- High fidelity maintained: All original wording preserved
 
-If `resume_critic_agent` returns None or empty content, immediately report:
-"ERROR: [resume_writing_agent] -> Resume Critic Agent returned no content"
+Resume candidate ready for critic review."
 
 ERROR HANDLING:
-This is a Coordinator Agent. Follow the ADK three-layer pattern:
+This is a Worker Agent. Follow the ADK three-layer pattern:
 
 Session State Validation:
 - If resume_dict, job_description_dict, or quality_matches is missing from session state:
@@ -259,14 +249,6 @@ When using tools (save_resume_candidate_to_session):
 - If status is "error":
   * Log error
   * Return "ERROR: [resume_writing_agent] <INSERT ERROR MESSAGE FROM TOOL>"
-  * Stop
-
-When calling sub-agents (resume_critic_agent):
-- Check sub-agent response for the keyword "ERROR:"
-- If "ERROR:" is found:
-  * Log error
-  * Prepend agent name to create error chain
-  * Return "ERROR: [resume_writing_agent] -> <INSERT ERROR MESSAGE FROM CHILD>"
   * Stop
 
 For validation errors during processing:
@@ -284,6 +266,7 @@ CRITICAL PRINCIPLES:
 5. CONSERVATIVE PRUNING: Only remove obviously irrelevant certifications
 6. JOB_ID IMMUTABLE: Never change job_id sequence (job_001 = oldest always)
 7. CHRONOLOGICAL ORDER: Jobs newest first, oldest last (always)
+8. YOU ARE A WORKER: You do NOT call other agents - parent orchestrator (Resume Refiner) calls the next agent
 
 WHAT NOT TO DO:
 - DO NOT rephrase achievement text

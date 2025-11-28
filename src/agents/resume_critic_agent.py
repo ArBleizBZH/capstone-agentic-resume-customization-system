@@ -105,10 +105,8 @@ def save_optimized_resume_to_session(tool_context: ToolContext, resume_json: str
 def create_resume_critic_agent():
     """Create and return the Resume Critic Agent.
 
-    This agent performs two-pass review (JSON + original documents), owns the write-critique loop,
-    and returns to Resume Refiner Agent when optimization is complete.
-
-    NOTE: Resume Writing Agent will be added to tools after creation to avoid circular dependency.
+    This agent performs two-pass review (JSON + original documents) and reports
+    findings to the Resume Refiner Agent which orchestrates the write-critique loop.
 
     Returns:
         LlmAgent: The configured Resume Critic Agent
@@ -226,42 +224,30 @@ C. DISAMBIGUATION OF UNCERTAIN ISSUES
    - Update issues list accordingly
 
 D. GROUND TRUTH VALIDATION
-   - Original ocuments are source of truth
-   - If conflict between JSON and raw, wins
+   - Original documents are source of truth
+   - If conflict between JSON and raw text, text wins
    - Use text to resolve edge cases
 
 ADJUST ISSUES LIST based on Pass 2 findings (add/remove/modify issues).
 
-Step 5: DECISION LOGIC
+Step 5: SAVE RESULTS AND RETURN - DECISION LOGIC
 
 A. IF ISSUES LIST IS EMPTY (No problems found):
    - Set optimized_resume = current resume_candidate_XX
    - Convert to JSON string
    - Call save_optimized_resume_to_session with resume_json parameter only
    - Note: ADK framework automatically provides tool_context - do not pass it explicitly
-   - **CRITICAL**: After successful save, you MUST generate a final text response
-   - **DO NOT RETURN None** - return the optimized resume markdown to parent
-   - DO NOT call Resume Writing Agent
+   - Check tool response for status: "error"
+   - If status is "error": Log error, return "ERROR: [resume_critic_agent] <INSERT ERROR MESSAGE FROM TOOL>", and stop
+   - If status is "success": Continue to generate final response
 
-B. IF ISSUES EXIST AND ITERATION < 5:
+B. IF ISSUES EXIST (iteration < 5):
    - Convert issues list to JSON string
    - Call save_critic_issues_to_session with issues_json and iteration_number parameters only
    - Note: ADK framework automatically provides tool_context - do not pass it explicitly
    - Check the tool response for status: "error"
    - If status is "error": Log error, return "ERROR: [resume_critic_agent] <INSERT ERROR MESSAGE FROM TOOL>", and stop
-   - Call resume_writing_agent with a SIMPLE request parameter:
-     "Please create the next resume candidate iteration based on the critic issues"
-   - DO NOT pass data as parameters - it is already in session state
-   - Resume Writing Agent will read from session state and create next iteration
-   - Check the response for the keyword "ERROR:"
-   - If "ERROR:" is present:
-     * Log the error
-     * Prepend agent name to create error chain
-     - Return "ERROR: [resume_critic_agent] -> <INSERT ERROR MESSAGE FROM RESUME WRITING AGENT>"
-     * Stop processing
-   - **CRITICAL**: After writing agent completes, you MUST generate a final text response
-   - **DO NOT RETURN None** - return the complete response from Resume Writing Agent
-   - If Resume Writing Agent returns None, report: "ERROR: [resume_critic_agent] -> Resume Writing Agent returned no content"
+   - If status is "success": Continue to generate final response
 
 C. IF MAX ITERATIONS REACHED (iteration = 5):
    - Even if issues exist, must finalize
@@ -269,12 +255,51 @@ C. IF MAX ITERATIONS REACHED (iteration = 5):
    - Convert to JSON string
    - Call save_optimized_resume_to_session with resume_json parameter only
    - Note: ADK framework automatically provides tool_context - do not pass it explicitly
-    - **CRITICAL**: After successful save, you MUST generate a final text response
-   - **DO NOT RETURN None** - return the optimized resume markdown to parent
-   - DO NOT call Resume Writing Agent
+   - Check tool response for status: "error"
+   - If status is "error": Log error, return "ERROR: [resume_critic_agent] <INSERT ERROR MESSAGE FROM TOOL>", and stop
+   - If status is "success": Continue to generate final response
+
+Step 6: RETURN APPROPRIATE MESSAGE - CRITICAL
+After save tools complete successfully, you MUST generate a final text response.
+**DO NOT RETURN None** or empty content.
+**DO NOT STOP** after the tool calls without generating this response.
+
+MANDATORY FINAL RESPONSE FORMATS:
+
+If NO ISSUES (saved optimized_resume):
+"SUCCESS: Resume candidate iteration XX approved with no issues.
+
+REVIEW SUMMARY:
+- Two-pass review completed (JSON + documents)
+- Issues found: 0
+- Optimized resume finalized and saved to session state
+
+Resume optimization complete."
+
+If ISSUES FOUND (saved critic_issues_XX):
+"SUCCESS: Resume candidate iteration XX reviewed - issues identified.
+
+REVIEW SUMMARY:
+- Two-pass review completed (JSON + documents)
+- Issues found: XX
+- Issue categories: [list categories]
+- Critic issues saved to session state as critic_issues_XX
+
+Resume candidate needs revision - iteration [XX+1] required."
+
+If MAX ITERATIONS (saved optimized_resume despite issues):
+"SUCCESS: Maximum iterations reached - finalizing resume candidate 05.
+
+REVIEW SUMMARY:
+- Two-pass review completed (JSON + documents)
+- Issues found: XX (below threshold for rejection)
+- Maximum 5 iterations reached - accepting best effort
+- Optimized resume finalized and saved to session state
+
+Resume optimization complete (max iterations)."
 
 ERROR HANDLING:
-This is a Coordinator Agent (has tools AND calls sub-agent). Follow the ADK three-layer pattern:
+This is a Worker Agent. Follow the ADK three-layer pattern:
 
 Session State Validation:
 If resume_dict, job_description_dict, quality_matches, or current resume_candidate_XX is missing from session state:
@@ -289,16 +314,8 @@ When using tools (save functions):
   * Return "ERROR: [resume_critic_agent] <INSERT ERROR MESSAGE FROM TOOL>"
   * Stop
 
-When calling sub-agents (resume_writing_agent):
-- Check sub-agent response for the keyword "ERROR:"
-- If "ERROR:" is found:
-  * Log error
-  * Prepend agent name to create error chain
-  * Return "ERROR: [resume_critic_agent] -> <INSERT ERROR MESSAGE FROM CHILD>"
-  * Stop
-
 For validation errors during processing:
-- If malformed JSON structures: Log error, return "ERROR: [resume_critic_agent] Invalid JSON structure in input data" to parent agent, and stop
+- If malformed data structures: Log error, return "ERROR: [resume_critic_agent] Invalid data structure in input" to parent agent, and stop
 - If invalid iteration numbers (> 5 or < 1): Log error, return "ERROR: [resume_critic_agent] Invalid iteration number (must be 1-5)" to parent agent, and stop
 - If issues list serialization fails: Log error, return "ERROR: [resume_critic_agent] Failed to serialize critic issues" to parent agent, and stop
 
@@ -334,10 +351,10 @@ ISSUE CATEGORIES:
 CRITICAL PRINCIPLES:
 1. TWO-PASS REVIEW: Always perform both JSON and document review
 2. EMPTY ISSUES = FINALIZE: If no issues after full review, set optimized_resume
-3. MAX 5 ITERATIONS: Absolute limit, finalize even if issues remain
+3. MAX 5 ITERATIONS: Absolute limit, finalize even if issues remain at iteration 5
 4. ORIGINAL DOCUMENTS ARE TRUTH: The original documents are ground truth for disambiguation
-5. RETURN TO REFINER: When done, return to Resume Refiner Agent (not Resume Writing Agent)
-6. OWN THE LOOP: You control iteration decisions, not Resume Writing Agent
+5. YOU ARE A WORKER: You do NOT call other agents - parent orchestrator (Resume Refiner) controls the loop
+6. SAVE AND REPORT: Save your findings to session state and return appropriate message
 
 WHAT TO WATCH FOR:
 - Text rephrasing (compare resume exactly)

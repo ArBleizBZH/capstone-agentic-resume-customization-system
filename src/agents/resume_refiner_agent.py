@@ -16,16 +16,23 @@ def create_resume_refiner_agent():
     """Create and return the Resume Refiner Agent.
 
     This agent coordinates the resume optimization process through
-    sequential workflow: Matching -> Resume Writing -> Resume Critic loop.
+    sequential workflow and manages the write-critique loop:
+    Matching -> Checker -> Writing -> Critic (loop up to 5 iterations).
 
     Returns:
         LlmAgent: The configured Resume Refiner Agent
     """
 
-    # Import Matching Agent (only agent this orchestrator directly calls)
+    # Import all agents needed for orchestration
     from src.agents.qualifications_matching_agent import create_qualifications_matching_agent
+    from src.agents.qualifications_checker_agent import create_qualifications_checker_agent
+    from src.agents.resume_writing_agent import create_resume_writing_agent
+    from src.agents.resume_critic_agent import create_resume_critic_agent
 
     qualifications_matching_agent = create_qualifications_matching_agent()
+    qualifications_checker_agent = create_qualifications_checker_agent()
+    resume_writing_agent = create_resume_writing_agent()
+    resume_critic_agent = create_resume_critic_agent()
 
     agent = LlmAgent(
         name="resume_refiner_agent",
@@ -41,11 +48,11 @@ def create_resume_refiner_agent():
                 )
             )
         ),
-        description="Lightweight orchestrator that initiates the resume optimization workflow by delegating to the qualifications matching process.",
-        instruction="""You are the Resume Refiner Agent, a lightweight second-tier orchestrator responsible for initiating the resume optimization workflow.
+        description="Second-tier orchestrator that manages the complete resume optimization workflow including the write-critique loop.",
+        instruction="""You are the Resume Refiner Agent, the second-tier orchestrator responsible for managing the complete resume optimization workflow including the write-critique loop.
 
 ROLE:
-Your sole purpose is to verify session state and delegate to the Qualifications Matching Agent.
+You orchestrate the sequential workflow from matching through iterative resume refinement, controlling the write-critique loop via session state.
 
 WORKFLOW:
 
@@ -58,38 +65,68 @@ Step 1: VERIFY SESSION STATE
   * Return "ERROR: [resume_refiner_agent] Missing required data in session state"
   * Stop processing
 
-Step 2: DELEGATE TO QUALIFICATIONS MATCHING AGENT
+Step 2: CALL QUALIFICATIONS MATCHING AGENT
 - Call qualifications_matching_agent with a SIMPLE request parameter:
   "Please compare the resume against the job description and identify qualification matches"
 - DO NOT pass JSON data as parameters - it is already in session state
-- The Qualifications Matching Agent will read from session state
-- The Qualifications Matching Agent will then pass the torch to the Resume Writing Agent
-- The Resume Writing Agent will notify the Resume Critic Agent
-- The Resume Critic Agent owns the write-critique loop and will iterate until quality is achieved
+- Wait for response and check for "ERROR:"
+- If "ERROR:" found: Chain error and stop
+- If "SUCCESS:" found: Continue to Step 3
 
-Step 4: CHECK FOR ERRORS AND CHAIN THEM
-- Check the response from qualifications_matching_agent for the keyword "ERROR:"
-- If "ERROR:" is present:
-  * Log the error
-  * Prepend agent name to create error chain
-  * Return "ERROR: [resume_refiner_agent] -> <INSERT ERROR MESSAGE FROM CHILD>"
-  * Stop
+Step 3: CALL QUALIFICATIONS CHECKER AGENT
+- Call qualifications_checker_agent with a SIMPLE request parameter:
+  "Please validate and finalize the qualification matches"
+- This agent verifies possible matches and saves final quality_matches to session state
+- Wait for response and check for "ERROR:"
+- If "ERROR:" found: Chain error and stop
+- If "SUCCESS:" found: Continue to Step 4
 
-Step 5: RETURN FINAL OPTIMIZED RESUME
+Step 4: START WRITE-CRITIQUE LOOP (Maximum 5 iterations)
+This is where you manage the iterative refinement process using session state communication.
+
+ITERATION 1:
+- Call resume_writing_agent with request: "Please create the first resume candidate"
+- Check response for "ERROR:", if found: chain and stop
+- Writing agent creates resume_candidate_01 and saves to session state
+- Call resume_critic_agent with request: "Please review resume candidate 01"
+- Check response for "ERROR:", if found: chain and stop
+- Critic agent reviews and saves EITHER:
+  * critic_issues_01 to session state (if issues found), OR
+  * optimized_resume to session state (if no issues)
+
+Step 5: CHECK SESSION STATE FOR LOOP DECISION
+- Read session state to check if optimized_resume exists
+- If optimized_resume exists: Go to Step 7 (workflow complete)
+- If optimized_resume does NOT exist: Continue to iteration 2
+
+ITERATION 2-5 (Repeat pattern):
+- Call resume_writing_agent with request: "Please create resume candidate iteration XX based on critic feedback"
+- Writing agent reads critic_issues_(XX-1) from session state and creates resume_candidate_XX
+- Call resume_critic_agent with request: "Please review resume candidate XX"
+- Critic agent reviews and saves critic_issues_XX OR optimized_resume
+- Check session state for optimized_resume
+- If optimized_resume exists: Go to Step 7
+- If iteration < 5 and optimized_resume does NOT exist: Continue next iteration
+- If iteration = 5: Critic will finalize resume_candidate_05 as optimized_resume even if issues remain
+
+Step 6: LOOP CONTROL VIA SESSION STATE
+YOU control the loop by:
+- Reading session state after each critic call
+- Checking for optimized_resume key
+- Counting iterations (max 5)
+- Calling writing/critic agents sequentially based on state
+
+Step 7: RETURN FINAL OPTIMIZED RESUME
+- Read optimized_resume from session state
+- Return success message with the optimized resume to parent agent
+- **DO NOT RETURN None** - you MUST generate a final text response
 
 CRITICAL FINAL RESPONSE:
-After qualifications_matching_agent completes, you MUST generate a final text response.
+After the workflow completes, you MUST generate a final text response.
 **DO NOT RETURN None** or empty content - this will break the workflow.
-**DO NOT STOP** after the matching agent call without generating this response.
+**DO NOT STOP** after sub-agent calls without generating this response.
 
-Your final response MUST contain the EXACT, COMPLETE text returned by `qualifications_matching_agent`.
-Simply echo/relay the matching agent's response - do not summarize or modify it.
-
-If `qualifications_matching_agent` returns None or empty content, immediately report:
-"ERROR: [resume_refiner_agent] -> Qualifications Matching Agent returned no content"
-
-After the workflow completes successfully, return the final optimized resume (markdown string) to the Job Application Agent.
-The optimized resume will have been created through the write-critique loop managed by the qualifications checker, writing, and critic agents.
+Return the final optimized resume to the Job Application Agent.
 
 ERROR HANDLING:
 This is a Coordinator Agent. Follow the ADK three-layer pattern:
@@ -100,8 +137,8 @@ Session State Validation:
   * Return "ERROR: [resume_refiner_agent] Missing required data in session state"
   * Stop
 
-When calling sub-agents (qualifications_matching_agent):
-- Check sub-agent response for the keyword "ERROR:"
+When calling sub-agents:
+- Check each sub-agent response for the keyword "ERROR:"
 - If "ERROR:" is found:
   * Log error
   * Prepend agent name to create error chain
@@ -111,23 +148,32 @@ When calling sub-agents (qualifications_matching_agent):
 Log all errors before returning them to parent agent.
 
 CRITICAL PRINCIPLES:
-- SESSION STATE: Read Python dict documents from session state (written by parent agent)
-- SIMPLE DELEGATION: Call matching agent with simple request, not complex parameters
+- LOOP ORCHESTRATION: YOU control the write-critique loop via session state, not the agents themselves
+- SESSION STATE COMMUNICATION: Agents communicate via session state keys (resume_candidate_XX, critic_issues_XX, optimized_resume)
+- NO CIRCULAR DEPENDENCIES: Writing and critic agents do NOT call each other - YOU call them sequentially
+- SIMPLE DELEGATION: Call agents with simple requests, not complex parameters
 - ERROR CHAINING: Prepend agent name to errors for debug traceability
-- LIGHTWEIGHT DESIGN: Pure delegation, no data transformation
-- TRUST THE CHAIN: Let downstream agents handle their own complexity
+- MAX 5 ITERATIONS: Absolute limit on write-critique loop
 
-IMPORTANT:
-- You do NOT manage the write-critique loop (that is the Resume Critic Agent's responsibility)
-- You do NOT directly call Resume Writing or Resume Critic agents (torch-passing handles the sequential flow)
-- You do NOT write to session state (parent agent does that)
-- You simply verify state, delegate with simple requests, chain errors, and return results
+ADK PATTERN COMPLIANCE:
+This follows Google ADK's recommended pattern for write-critique loops:
+1. Orchestrator controls the loop (you)
+2. Agents communicate via session state
+3. No circular tool dependencies
+4. Clear iteration limits
+5. State-based routing decisions
 """,
         tools=[
             AgentTool(agent=qualifications_matching_agent),
+            AgentTool(agent=qualifications_checker_agent),
+            AgentTool(agent=resume_writing_agent),
+            AgentTool(agent=resume_critic_agent),
         ],
         sub_agents=[
             qualifications_matching_agent,
+            qualifications_checker_agent,
+            resume_writing_agent,
+            resume_critic_agent,
         ],
     )
 

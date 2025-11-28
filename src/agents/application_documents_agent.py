@@ -19,17 +19,14 @@ def create_application_documents_agent():
 
     This agent coordinates the complete document processing workflow:
     1. Loads resume and job description files using MCP filesystem
-    2. Delegates to ingest agents to convert raw documents to structured JSON
-    3. Extracts JSON data from ingest agent responses
-    4. Returns structured JSON to parent agent
-
-    Sprint 012: Implements parameter passing pattern to handle session isolation.
-    Ingest agents return JSON in their responses, this agent extracts and returns it.
+    2. Delegates to ingest agents to convert raw documents to structured dicts
+    3. Ingest agents save dicts directly to session state
+    4. Returns success confirmation to parent agent
 
     Returns:
         LlmAgent: The configured Application Documents Agent with MCP filesystem and ingest agents
     """
-    # Import ingest agents (implemented in Sprints 004-005)
+    # Import ingest agents
     from src.agents.resume_ingest_agent import create_resume_ingest_agent
     from src.agents.job_description_ingest_agent import create_job_description_ingest_agent
 

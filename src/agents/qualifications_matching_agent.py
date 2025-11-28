@@ -73,16 +73,11 @@ def create_qualifications_matching_agent():
     """Create and return the Qualifications Matching Agent.
 
     This agent compares resume against job description using categorized qualifications
-    and creates preliminary match lists. Delegates to Qualifications Checker Agent for verification and coordination.
+    and creates preliminary match lists, saving them to session state.
 
     Returns:
         LlmAgent: The configured Qualifications Matching Agent
     """
-
-    # Import Qualifications Checker Agent for delegation
-    from src.agents.qualifications_checker_agent import create_qualifications_checker_agent
-
-    qualifications_checker_agent = create_qualifications_checker_agent()
 
     agent = LlmAgent(
         name="qualifications_matching_agent",
@@ -100,7 +95,7 @@ def create_qualifications_matching_agent():
         ),
         description="Finds preliminary matches between resume qualifications and job requirements using categorized comparison.",
         instruction="""You are the Qualifications Matching Agent.
-Your Goal: Read resume and job description from session state, create preliminary match lists, save them to session state, then call the checker agent.
+Your Goal: Read resume and job description from session state, create preliminary match lists, and save them to session state.
 
 WORKFLOW:
 
@@ -155,22 +150,21 @@ Step 4: SAVE POSSIBLE MATCHES TO SESSION STATE
 - Call save_possible_matches_to_session with possible_quality_matches parameter only (pass the Python list directly, not JSON)
 - Note: ADK framework automatically provides tool_context - do not pass it explicitly
 - If the tool response indicates "error": Log the error and return "ERROR: [qualifications_matching_agent] <INSERT ERROR MESSAGE FROM TOOL>" to parent agent, then STOP
+- If tool response indicates "success": Continue to Step 5
 
-Step 5: CALL CHECKER AGENT
-- Call qualifications_checker_agent with a SIMPLE request parameter:
-  "Please validate and process the qualification matches"
-- DO NOT pass match data or JSON as parameters - it is already in session state
-
-Step 6: RETURN RESPONSE - CRITICAL
-After calling the checker, you MUST generate a final text response.
+Step 5: RETURN SUCCESS MESSAGE - CRITICAL
+After both save tools complete successfully, you MUST generate a final text response.
 **DO NOT RETURN None** or empty content.
-**DO NOT STOP** after the tool call without generating this response.
+**DO NOT STOP** after the tool calls without generating this response.
 
-Your response MUST contain the EXACT, COMPLETE text returned by `qualifications_checker_agent`.
-Simply echo/relay the checker's response - do not summarize or modify it.
+MANDATORY FINAL RESPONSE FORMAT:
+"SUCCESS: Identified and saved qualification matches to session state.
 
-If `qualifications_checker_agent` returns None or empty content, immediately report:
-"ERROR: [qualifications_matching_agent] -> Qualifications Checker Agent returned no content"
+MATCH SUMMARY:
+- Quality matches: XX (exact/direct evidence)
+- Possible matches: XX (inferred, needs validation)
+
+Both match lists saved to session state and ready for validation."
 
 ERROR HANDLING:
 
@@ -187,30 +181,19 @@ When using tools (save functions):
   * Return "ERROR: [qualifications_matching_agent] <INSERT ERROR MESSAGE FROM TOOL>"
   * Stop
 
-When calling sub-agents (qualifications_checker_agent):
-- Check sub-agent response for the keyword "ERROR:"
-- If "ERROR:" is found:
-  * Log error
-  * Prepend agent name to create error chain
-  * Return "ERROR: [qualifications_matching_agent] -> <INSERT ERROR FROM CHILD AGENT>"
-  * Stop
-
 Log all errors before returning them to parent agent.
 
 CRITICAL RULES:
 - Read resume/JD from session state - NOT from parameters
 - Save match lists to session state - NOT pass as parameters
-- Call checker with simple request - NOT complex parameters
-- Return checker's complete response - DO NOT RETURN None
+- Return success message after saving - DO NOT RETURN None
 - Preserve job_id context in all match objects
+- YOU are a worker agent - you do NOT call other agents
+- Parent orchestrator (Resume Refiner) will call the next agent in the workflow
 """,
         tools=[
             save_quality_matches_to_session,
             save_possible_matches_to_session,
-            AgentTool(agent=qualifications_checker_agent),
-        ],
-        sub_agents=[
-            qualifications_checker_agent,
         ],
     )
 
