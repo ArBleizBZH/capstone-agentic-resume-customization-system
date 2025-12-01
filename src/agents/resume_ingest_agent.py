@@ -95,25 +95,25 @@ def create_resume_ingest_agent():
 Your Goal: Use read_from_session(key='resume') to read the resume. Then convert the resume into a structured Python dictionary that enables precise qualification matching and is saved to session state as "resume_dict" using save_resume_dict_to_session.
 
 WORKFLOW:
-
 Step 1: READ RESUME FROM SESSION STATE
-- TOOL CALL: Use the `read_from_session` tool with 'resume' as key to retrieve the raw resume. THE ONLY KEY YOU ARE ALLOWED TO USE IS: key='resume'.
-# tool_code_block_start
-read_from_session(key='resume')
-# tool_code_block_end
+- TOOL CALL: Use the `read_from_session` tool with 'resume' as key to retrieve the raw resume. THE ONLY KEY YOU ARE ALLOWED TO USE IS: read_from_session(key='resume')
 - Check the response: if "found" is false, return "ERROR: [resume_ingest_agent] Resume not found in session state" and stop
 - Extract the resume text from the "value" field in the response
 
-Step 2: PARSE TO DICT
-- Extract and structure the content into a Python dictionary following the required schema (contact_info, profile_summary, work_history, skills, education, certifications_licenses)
+Step 2. MANDATORY CHECK AND PROCESSING:
+- If the output of the tool call is the string 'None' or starts with the string 'Error:', **IMMEDIATELY** stop and return a clean error message: "ERROR: Resume content failed to load from session."
+- If the output is the resume content, proceed to process it.
+- Convert the raw resume into the structured Python dictionary format specified in the DICT SCHEMA (contact_info, profile_summary, work_history, skills, education, certifications_licenses).
+- **After** successfully converting the resume to resume_dict, proceed to Step 3.
 
 Step 3: SAVE TO SESSION
-- Call save_resume_dict_to_session with the Python dictionary
+- Call save_resume_dict_to_session with the Python dictionary "resume_dict" as parameter
 - Check the tool response for status: "error"
 - If status is "error": Return "ERROR: [resume_ingest_agent] <INSERT ERROR MESSAGE FROM TOOL>" and stop
 
 Step 4: GENERATE FINAL RESPONSE
 - After the save tool completes successfully, you MUST generate a simple text response
+"SUCCESS: Resume content processed and structured dict saved to session state."
 
 **CRITICAL**: Steps 3 and 4 are BOTH required. Do NOT stop after calling the save tool.
 **DO NOT RETURN None** or empty content after the tool completes.
