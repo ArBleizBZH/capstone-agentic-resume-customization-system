@@ -3,7 +3,6 @@
 Implements session state pattern for data sharing between agents.
 """
 
-import json
 from typing import List, Dict, Any
 from google.adk.agents import LlmAgent
 from google.adk.models.google_llm import Gemini
@@ -11,6 +10,7 @@ from google.adk.tools import AgentTool
 from google.adk.tools.tool_context import ToolContext
 from google.genai import types
 from src.config.model_config import GEMINI_FLASH_MODEL, retry_config, GOOGLE_API_KEY
+from src.tools.session_tools import read_from_session
 
 
 def save_quality_matches_to_session(tool_context: ToolContext, quality_matches: List[Dict[str, Any]]) -> dict:
@@ -77,7 +77,11 @@ def create_qualifications_matching_agent():
 
     Returns:
         LlmAgent: The configured Qualifications Matching Agent
-    """
+    """    
+    
+    from src.agents.qualifications_checker_agent import create_qualifications_checker_agent
+        
+    qualifications_checker_agent = create_qualifications_checker_agent()
 
     agent = LlmAgent(
         name="qualifications_matching_agent",
@@ -93,21 +97,20 @@ def create_qualifications_matching_agent():
                 )
             )
         ),
-        description="Finds preliminary matches between resume qualifications and job requirements using categorized comparison.",
+        description="Finds preliminary matches between resume qualifications and job requirements using categorized comparison. Then have qualifications_checker_agent validate those lists.",
         instruction="""You are the Qualifications Matching Agent.
-Your Goal: Read resume and job description from session state, create preliminary match lists, and save them to session state.
+Your Goal: Read resume and job description from session state, create preliminary match lists, save them to session state, and have qualifications_checker_agent validate them.
 
 WORKFLOW:
 
 Step 1: READ FROM SESSION STATE
-- Read the resume and job description from session state:
-  * resume_dict = state.get('resume_dict')
-  * job_description_dict = state.get('job_description_dict')
+- Call read_from_session with key="resume_dict" to retrieve the structured resume
+- Check the response: if "found" is false, return "ERROR: [qualifications_matching_agent] resume_dict not found in session state" and stop
+- Extract resume_dict from the "value" field
+- Call read_from_session with key="job_description_dict" to retrieve the structured job description
+- Check the response: if "found" is false, return "ERROR: [qualifications_matching_agent] job_description_dict not found in session state" and stop
+- Extract job_description_dict from the "value" field
 - These are Python dictionaries - access data directly (no parsing needed)
-- If either is missing or empty:
-  * Log the error
-  * Return "ERROR: [qualifications_matching_agent] Missing resume or job description in session state"
-  * Stop processing
 
 Step 2: ANALYZE & CREATE MATCH LISTS
 Compare resume qualifications against job requirements:
@@ -142,18 +145,27 @@ Each match object MUST have:
 **IMPORTANT**: Preserve job_id context in resume_source (e.g., "job_001.job_technologies")
 
 Step 3: SAVE QUALITY MATCHES TO SESSION STATE
-- Call save_quality_matches_to_session with quality_matches parameter only (pass the Python list directly, not JSON)
+- Call save_quality_matches_to_session with quality_matches parameter only (pass the Python list directly)
 - Note: ADK framework automatically provides tool_context - do not pass it explicitly
 - If the tool response indicates "error": Log the error and return "ERROR: [qualifications_matching_agent] <INSERT ERROR MESSAGE FROM TOOL>" to parent agent, then STOP
 
 Step 4: SAVE POSSIBLE MATCHES TO SESSION STATE
-- Call save_possible_matches_to_session with possible_quality_matches parameter only (pass the Python list directly, not JSON)
+- Call save_possible_matches_to_session with possible_quality_matches parameter only (pass the Python list directly)
 - Note: ADK framework automatically provides tool_context - do not pass it explicitly
 - If the tool response indicates "error": Log the error and return "ERROR: [qualifications_matching_agent] <INSERT ERROR MESSAGE FROM TOOL>" to parent agent, then STOP
 - If tool response indicates "success": Continue to Step 5
 
-Step 5: RETURN SUCCESS MESSAGE - CRITICAL
-After both save tools complete successfully, you MUST generate a final text response.
+
+STEP 5: CALL QUALIFICATIONS CHECKER
+- Call qualifications_checker_agent.
+- WAIT for its response.
+- The Checker agent will save the final 'quality_matches' to session state.
+- Only proceed to Step 6 after you receive a SUCCESS response from the Checker.
+- If the tool response indicates "error": Log the error and return "ERROR: [qualifications_checker_agent] <INSERT ERROR MESSAGE FROM TOOL>" to parent agent, then STOP
+- If tool response indicates "success": Continue to Step 6
+
+Step 6: RETURN SUCCESS MESSAGE - CRITICAL
+After the qualifications_checker_agent complete successfully, you MUST generate a final text response.
 **DO NOT RETURN None** or empty content.
 **DO NOT STOP** after the tool calls without generating this response.
 
@@ -161,10 +173,10 @@ MANDATORY FINAL RESPONSE FORMAT:
 "SUCCESS: Identified and saved qualification matches to session state.
 
 MATCH SUMMARY:
-- Quality matches: XX (exact/direct evidence)
-- Possible matches: XX (inferred, needs validation)
+- Quality matches: XX (Final list of validated matches)
+- Possible matches: XX (Count of possible matches before validation)
 
-Both match lists saved to session state and ready for validation."
+The final quality match list has been saved to session state and is ready for the next step."
 
 ERROR HANDLING:
 
@@ -188,12 +200,15 @@ CRITICAL RULES:
 - Save match lists to session state - NOT pass as parameters
 - Return success message after saving - DO NOT RETURN None
 - Preserve job_id context in all match objects
-- YOU are a worker agent - you do NOT call other agents
-- Parent orchestrator (Resume Refiner) will call the next agent in the workflow
 """,
         tools=[
+            read_from_session,
+            AgentTool(agent=qualifications_checker_agent),
             save_quality_matches_to_session,
             save_possible_matches_to_session,
+        ],
+        sub_agents=[
+            qualifications_checker_agent
         ],
     )
 

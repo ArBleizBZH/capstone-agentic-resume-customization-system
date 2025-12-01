@@ -3,30 +3,28 @@
 Based on Day 1a and Day 2a notebook patterns for LlmAgent with AgentTool.
 """
 
-import json
 from google.adk.agents import LlmAgent
 from google.adk.models.google_llm import Gemini
 from google.adk.tools import AgentTool
 from google.adk.tools.tool_context import ToolContext
 from google.genai import types
 from src.config.model_config import GEMINI_FLASH_MODEL, retry_config, GOOGLE_API_KEY
+from src.tools.session_tools import read_from_session
 
 
-def save_resume_candidate_to_session(tool_context: ToolContext, candidate_json: str, iteration_number: str) -> dict:
+def save_resume_candidate_to_session(tool_context: ToolContext, resume_candidate: dict, iteration_number: str) -> dict:
     """Save resume candidate to session state with iteration tracking.
 
     Args:
         tool_context: ADK tool context with state access
-        candidate_json: JSON string containing resume candidate data
+        resume_candidate: Python dict containing resume candidate data
         iteration_number: Iteration number as string ("01" through "05")
 
     Returns:
         Dictionary with status and message
     """
     try:
-        candidate_data = json.loads(candidate_json)
-
-        if not isinstance(candidate_data, dict):
+        if not isinstance(resume_candidate, dict):
             return {
                 "status": "error",
                 "message": "resume_candidate must be a dictionary"
@@ -41,7 +39,7 @@ def save_resume_candidate_to_session(tool_context: ToolContext, candidate_json: 
 
         # Save with iteration-specific key
         session_key = f"resume_candidate_{iteration_number}"
-        tool_context.state[session_key] = candidate_data
+        tool_context.state[session_key] = resume_candidate
 
         return {
             "status": "success",
@@ -50,11 +48,6 @@ def save_resume_candidate_to_session(tool_context: ToolContext, candidate_json: 
             "iteration": iteration_number
         }
 
-    except json.JSONDecodeError as e:
-        return {
-            "status": "error",
-            "message": f"Invalid JSON format: {str(e)}"
-        }
     except Exception as e:
         return {
             "status": "error",
@@ -98,16 +91,11 @@ FOCUS: Highlighting and Pruning (Not Rewriting)
 WORKFLOW:
 
 Step 1: READ FROM SESSION STATE
-- Read all required data from session state:
-  * resume_dict = state.get('resume_dict')  - Python dict containing original resume structure
-  * job_description_dict = state.get('job_description_dict')  - Python dict containing job requirements
-  * quality_matches = state.get('quality_matches')  - Python list containing validated matches with job_id context
+- Call read_from_session with key="resume_dict" and extract from "value" field (Python dict containing original resume structure)
+- Call read_from_session with key="job_description_dict" and extract from "value" field (Python dict containing job requirements)
+- Call read_from_session with key="quality_matches" and extract from "value" field (Python list containing validated matches with job_id context)
+- Check each response: if "found" is false for any required key, return "ERROR: [resume_writing_agent] Missing required data in session state" and stop
 - These are Python objects - access data directly (no parsing needed)
-- Check if all three are present and non-empty
-- If any is missing or empty:
-  * Log the error
-  * Return "ERROR: [resume_writing_agent] Missing required data in session state"
-  * Stop processing
 
 Step 2: DETERMINE ITERATION NUMBER
 - Check if critic_issues_XX exists in session state
@@ -210,9 +198,8 @@ Step 7: VALIDATE OUTPUT
 - Validate no achievements added that weren't in original
 
 Step 8: SAVE TO SESSION STATE
-- Convert resume candidate to JSON string
 - Determine iteration number string ("01", "02", "03", "04", or "05")
-- Call save_resume_candidate_to_session with candidate_json and iteration_number parameters only
+- Call save_resume_candidate_to_session with resume_candidate (Python dict) and iteration_number parameters only
 - Note: ADK framework automatically provides tool_context - do not pass it explicitly
 - Check the tool response for status: "error"
 - If status is "error": Log the error and return "ERROR: [resume_writing_agent] <INSERT ERROR MESSAGE FROM TOOL>" to parent agent and stop
@@ -282,6 +269,7 @@ STRUCTURE TEMPLATE:
 Use resume_dict from session state as your template. Match its structure exactly. Reference src/schemas/resume_schema_core.json if uncertain about any field requirements.
 """,
         tools=[
+            read_from_session,
             save_resume_candidate_to_session,
         ],
     )

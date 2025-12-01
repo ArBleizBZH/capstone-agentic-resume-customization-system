@@ -7,7 +7,70 @@ Based on Day 1a, Day 3a, and Day 4a notebook patterns.
 import asyncio
 from src.plugins import logging_config  # Initialize logging
 from src.app import create_runner
+from pathlib import Path
+#from google.adk.sessions import SessionState
+#from google.adk.sessions.session_state import SessionState
 
+# CONFIG
+# Use home directory path (no /mnt/) for WSL compatibility
+#BASE_DIR = str(Path.home() / "")
+BASE_DIR = Path.home()
+
+
+# Query for the filenames
+#TODO: Add input for file names
+RESUME = "resume.md"
+JOB_DESCRIPTION = "mytextfile.txt"
+
+files_info= {
+    "resume": str(BASE_DIR / RESUME),
+    "job_description": str(BASE_DIR / JOB_DESCRIPTION)
+}
+
+
+def read_file(file_path):
+    """Reads the entire content of a file."""
+    try:
+        # 'r' mode for reading, 'utf-8' is a common and robust encoding
+        with open(file_path, 'r', encoding='utf-8') as file:
+            # .read() returns the file's entire content as a single string
+            content = file.read()
+            return content
+    except FileNotFoundError:
+        return f"Error: The file '{file_path}' was not found in the current directory."
+    except Exception as e:
+        return f"An unexpected error occurred: {e}"
+
+
+def read_files(files_info):
+    """Reads the entire content of the files."""
+    
+    # Initialize an empty dictionary to store all results
+    results = {}
+
+    # Extracting the paths using the dictionary keys
+    resume_path = files_info["resume"]
+    job_description_path = files_info["job_description"]
+    
+    # loop through files
+    for key, file_path in files_info.items():
+        # ... process the key and file_path here ...
+        print(f"Processing key: {key}, file_path: {file_path}")
+        
+        # Call read_file and store the content in the results dictionary
+        file_content = read_file(file_path)
+        results[key] = file_content
+        
+    # Return the dictionary containing all file contents
+    return results
+
+def load_data():
+    """ Load resume and job description data into session state. """
+
+    # Retrieve the files contents
+    files_contents = read_files(files_info)
+    
+    return files_contents
 
 def print_metrics_summary(metrics):
     """Format and display metrics summary.
@@ -66,19 +129,24 @@ async def main():
     print("="*60 + "\n")
 
     try:
+        # Create a base SessionState object
+        #initial_state = SessionState()
+        
+        # 2. Call load_data() to load the files contents
+        pre_loaded_state = load_data()
+        
         # Create the runner and get metrics plugin
         print("Creating runner...")
-        runner, metrics_plugin = create_runner()
+        runner, metrics_plugin, session_id = await create_runner(initial_state=pre_loaded_state)
 
         # Full workflow test with actual input files
         print("\nRunning full workflow with input files...")
-        print("  Resume: resume.md (via MCP)")
-        print("  Job Description: job_description.md (via MCP)\n")
 
         response = await runner.run_debug(
             "Please optimize my resume for this job application. "
             "Resume file: resume.md. "
-            "Job description file: job_description.md."
+            "Job description file: job_description.md.",
+            session_id=session_id
         )
 
         print("\n" + "="*60)

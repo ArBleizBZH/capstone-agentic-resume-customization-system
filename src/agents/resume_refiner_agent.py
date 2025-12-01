@@ -11,13 +11,15 @@ from google.adk.models.google_llm import Gemini
 from google.adk.tools import AgentTool
 from src.config.model_config import GEMINI_FLASH_MODEL, retry_config, GOOGLE_API_KEY
 
+from src.tools.session_tools import read_from_session
+
 
 def create_resume_refiner_agent():
     """Create and return the Resume Refiner Agent.
 
     This agent coordinates the resume optimization process through
     sequential workflow and manages the write-critique loop:
-    Matching -> Checker -> Writing -> Critic (loop up to 5 iterations).
+    Matching -> Writing -> Critic (loop up to 5 iterations).
 
     Returns:
         LlmAgent: The configured Resume Refiner Agent
@@ -25,12 +27,10 @@ def create_resume_refiner_agent():
 
     # Import all agents needed for orchestration
     from src.agents.qualifications_matching_agent import create_qualifications_matching_agent
-    from src.agents.qualifications_checker_agent import create_qualifications_checker_agent
     from src.agents.resume_writing_agent import create_resume_writing_agent
     from src.agents.resume_critic_agent import create_resume_critic_agent
 
     qualifications_matching_agent = create_qualifications_matching_agent()
-    qualifications_checker_agent = create_qualifications_checker_agent()
     resume_writing_agent = create_resume_writing_agent()
     resume_critic_agent = create_resume_critic_agent()
 
@@ -57,35 +57,23 @@ You orchestrate the sequential workflow from matching through iterative resume r
 WORKFLOW:
 
 Step 1: VERIFY SESSION STATE
-- Check that session state contains the required data:
-  * state.get('resume_dict') should not be None
-  * state.get('job_description_dict') should not be None
-- If either is missing:
-  * Log the error
-  * Return "ERROR: [resume_refiner_agent] Missing required data in session state"
-  * Stop processing
+- Call read_from_session with key="resume_dict" and extract from "value" field (Python dict containing original resume structure)
+- Call read_from_session with key="job_description_dict" and extract from "value" field (Python dict containing job requirements)
+- Check each response: if "found" is false for any required key, return "ERROR: [resume_writing_agent] Missing required data in session state" and stop
+- These are Python objects - access data directly (no parsing needed)
 
 Step 2: CALL QUALIFICATIONS MATCHING AGENT
-- Call qualifications_matching_agent with a SIMPLE request parameter:
-  "Please compare the resume against the job description and identify qualification matches"
-- DO NOT pass JSON data as parameters - it is already in session state
+- Call qualifications_matching_agent with a SIMPLE request:
+  "Please read_from_session with key="resume_dict" against a read_from_session with key="job_description_dict" and identify qualification matches"
 - Wait for response and check for "ERROR:"
 - If "ERROR:" found: Chain error and stop
 - If "SUCCESS:" found: Continue to Step 3
 
-Step 3: CALL QUALIFICATIONS CHECKER AGENT
-- Call qualifications_checker_agent with a SIMPLE request parameter:
-  "Please validate and finalize the qualification matches"
-- This agent verifies possible matches and saves final quality_matches to session state
-- Wait for response and check for "ERROR:"
-- If "ERROR:" found: Chain error and stop
-- If "SUCCESS:" found: Continue to Step 4
-
-Step 4: START WRITE-CRITIQUE LOOP (Maximum 5 iterations)
+Step 3: START WRITE-CRITIQUE LOOP (Maximum 5 iterations)
 This is where you manage the iterative refinement process using session state communication.
 
 ITERATION 1:
-- Call resume_writing_agent with request: "Please create the first resume candidate"
+- Call resume_writing_agent with request: "Please create the first resume candidate using the data in session state"
 - Check response for "ERROR:", if found: chain and stop
 - Writing agent creates resume_candidate_01 and saves to session state
 - Call resume_critic_agent with request: "Please review resume candidate 01"
@@ -94,9 +82,9 @@ ITERATION 1:
   * critic_issues_01 to session state (if issues found), OR
   * optimized_resume to session state (if no issues)
 
-Step 5: CHECK SESSION STATE FOR LOOP DECISION
+Step 4: CHECK SESSION STATE FOR LOOP DECISION
 - Read session state to check if optimized_resume exists
-- If optimized_resume exists: Go to Step 7 (workflow complete)
+- If optimized_resume exists: Go to Step 6 (workflow complete)
 - If optimized_resume does NOT exist: Continue to iteration 2
 
 ITERATION 2-5 (Repeat pattern):
@@ -105,18 +93,18 @@ ITERATION 2-5 (Repeat pattern):
 - Call resume_critic_agent with request: "Please review resume candidate XX"
 - Critic agent reviews and saves critic_issues_XX OR optimized_resume
 - Check session state for optimized_resume
-- If optimized_resume exists: Go to Step 7
+- If optimized_resume exists: Go to Step 6
 - If iteration < 5 and optimized_resume does NOT exist: Continue next iteration
 - If iteration = 5: Critic will finalize resume_candidate_05 as optimized_resume even if issues remain
 
-Step 6: LOOP CONTROL VIA SESSION STATE
+Step 5: LOOP CONTROL VIA SESSION STATE
 YOU control the loop by:
 - Reading session state after each critic call
 - Checking for optimized_resume key
 - Counting iterations (max 5)
 - Calling writing/critic agents sequentially based on state
 
-Step 7: RETURN FINAL OPTIMIZED RESUME
+Step 6: RETURN FINAL OPTIMIZED RESUME
 - Read optimized_resume from session state
 - Return success message with the optimized resume to parent agent
 - **DO NOT RETURN None** - you MUST generate a final text response
@@ -165,13 +153,11 @@ This follows Google ADK's recommended pattern for write-critique loops:
 """,
         tools=[
             AgentTool(agent=qualifications_matching_agent),
-            AgentTool(agent=qualifications_checker_agent),
             AgentTool(agent=resume_writing_agent),
             AgentTool(agent=resume_critic_agent),
         ],
         sub_agents=[
             qualifications_matching_agent,
-            qualifications_checker_agent,
             resume_writing_agent,
             resume_critic_agent,
         ],

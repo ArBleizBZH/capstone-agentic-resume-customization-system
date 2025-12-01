@@ -3,7 +3,7 @@
 Based on Day 1a and Day 2a notebook patterns for LlmAgent with AgentTool.
 """
 
-import json
+from typing import List, Dict, Any
 from google.adk.agents import LlmAgent
 from google.adk.models.google_llm import Gemini
 from google.adk.tools import AgentTool
@@ -11,22 +11,22 @@ from google.adk.tools.tool_context import ToolContext
 from google.genai import types
 from src.config.model_config import GEMINI_FLASH_MODEL, retry_config, GOOGLE_API_KEY
 
+from src.tools.session_tools import read_from_session
 
-def save_critic_issues_to_session(tool_context: ToolContext, issues_json: str, iteration_number: str) -> dict:
+
+def save_critic_issues_to_session(tool_context: ToolContext, critic_issues: List[Dict[str, Any]], iteration_number: str) -> dict:
     """Save critic issues to session state with iteration tracking.
 
     Args:
         tool_context: ADK tool context with state access
-        issues_json: JSON string containing list of issues
+        critic_issues: Python list containing issue dictionaries
         iteration_number: Iteration number as string ("01" through "05")
 
     Returns:
         Dictionary with status and message
     """
     try:
-        issues_list = json.loads(issues_json)
-
-        if not isinstance(issues_list, list):
+        if not isinstance(critic_issues, list):
             return {
                 "status": "error",
                 "message": "critic_issues must be a list"
@@ -41,21 +41,16 @@ def save_critic_issues_to_session(tool_context: ToolContext, issues_json: str, i
 
         # Save with iteration-specific key
         session_key = f"critic_issues_{iteration_number}"
-        tool_context.state[session_key] = issues_list
+        tool_context.state[session_key] = critic_issues
 
         return {
             "status": "success",
-            "message": f"Saved {len(issues_list)} critic issues for iteration {iteration_number} to session state",
+            "message": f"Saved {len(critic_issues)} critic issues for iteration {iteration_number} to session state",
             "session_key": session_key,
             "iteration": iteration_number,
-            "issue_count": len(issues_list)
+            "issue_count": len(critic_issues)
         }
 
-    except json.JSONDecodeError as e:
-        return {
-            "status": "error",
-            "message": f"Invalid JSON format: {str(e)}"
-        }
     except Exception as e:
         return {
             "status": "error",
@@ -63,26 +58,24 @@ def save_critic_issues_to_session(tool_context: ToolContext, issues_json: str, i
         }
 
 
-def save_optimized_resume_to_session(tool_context: ToolContext, resume_json: str) -> dict:
+def save_optimized_resume_to_session(tool_context: ToolContext, optimized_resume: dict) -> dict:
     """Save final optimized resume to session state.
 
     Args:
         tool_context: ADK tool context with state access
-        resume_json: JSON string containing final optimized resume
+        optimized_resume: Python dict containing final optimized resume
 
     Returns:
         Dictionary with status and message
     """
     try:
-        resume_data = json.loads(resume_json)
-
-        if not isinstance(resume_data, dict):
+        if not isinstance(optimized_resume, dict):
             return {
                 "status": "error",
                 "message": "optimized_resume must be a dictionary"
             }
 
-        tool_context.state["optimized_resume"] = resume_data
+        tool_context.state["optimized_resume"] = optimized_resume
 
         return {
             "status": "success",
@@ -90,11 +83,6 @@ def save_optimized_resume_to_session(tool_context: ToolContext, resume_json: str
             "session_key": "optimized_resume"
         }
 
-    except json.JSONDecodeError as e:
-        return {
-            "status": "error",
-            "message": f"Invalid JSON format: {str(e)}"
-        }
     except Exception as e:
         return {
             "status": "error",
@@ -136,10 +124,10 @@ TWO-PASS REVIEW PROCESS:
 WORKFLOW:
 
 Step 1: READ FROM SESSION STATE
-- Read all required data from session state:
-  * resume_dict = state.get('resume_dict')  - Original structured resume (for fidelity check)
-  * job_description_dict = state.get('job_description_dict')  - Job description (for context)
-  * quality_matches = state.get('quality_matches')  - Validated matches (for validation)
+- Call read_from_session with key="resume_dict" and extract from "value" field (Python dict containing original resume structure)
+- Call read_from_session with key="job_description_dict" and extract from "value" field (Python dict containing job requirements)
+- Call read_from_session with key="quality_matches" and extract from "value" field (Python list containing validated matches with job_id context)
+- Check each response: if "found" is false for any required key, return "ERROR: [resume_writing_agent] Missing required data in session state" and stop
 - These are Python objects - access data directly (no parsing needed)
 - Determine current iteration by checking which critic_issues_XX keys exist (if critic_issues_02 exists, we're reviewing candidate_03)
 - Read the current resume_candidate_XX from session state based on iteration
@@ -233,17 +221,15 @@ ADJUST ISSUES LIST based on Pass 2 findings (add/remove/modify issues).
 Step 5: SAVE RESULTS AND RETURN - DECISION LOGIC
 
 A. IF ISSUES LIST IS EMPTY (No problems found):
-   - Set optimized_resume = current resume_candidate_XX
-   - Convert to JSON string
-   - Call save_optimized_resume_to_session with resume_json parameter only
+   - Set optimized_resume = current resume_candidate_XX (Python dict)
+   - Call save_optimized_resume_to_session with optimized_resume parameter only
    - Note: ADK framework automatically provides tool_context - do not pass it explicitly
    - Check tool response for status: "error"
    - If status is "error": Log error, return "ERROR: [resume_critic_agent] <INSERT ERROR MESSAGE FROM TOOL>", and stop
    - If status is "success": Continue to generate final response
 
 B. IF ISSUES EXIST (iteration < 5):
-   - Convert issues list to JSON string
-   - Call save_critic_issues_to_session with issues_json and iteration_number parameters only
+   - Call save_critic_issues_to_session with critic_issues (Python list) and iteration_number parameters only
    - Note: ADK framework automatically provides tool_context - do not pass it explicitly
    - Check the tool response for status: "error"
    - If status is "error": Log error, return "ERROR: [resume_critic_agent] <INSERT ERROR MESSAGE FROM TOOL>", and stop
@@ -251,9 +237,8 @@ B. IF ISSUES EXIST (iteration < 5):
 
 C. IF MAX ITERATIONS REACHED (iteration = 5):
    - Even if issues exist, must finalize
-   - Set optimized_resume = resume_candidate_05 (best effort)
-   - Convert to JSON string
-   - Call save_optimized_resume_to_session with resume_json parameter only
+   - Set optimized_resume = resume_candidate_05 (Python dict, best effort)
+   - Call save_optimized_resume_to_session with optimized_resume parameter only
    - Note: ADK framework automatically provides tool_context - do not pass it explicitly
    - Check tool response for status: "error"
    - If status is "error": Log error, return "ERROR: [resume_critic_agent] <INSERT ERROR MESSAGE FROM TOOL>", and stop

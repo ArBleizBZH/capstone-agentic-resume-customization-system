@@ -56,15 +56,16 @@ def create_app():
     return app, metrics_plugin
 
 
-def create_runner():
+async def create_runner(initial_state: dict):
     """Create and configure the Runner with session service.
 
     Plugins are configured in the app.
 
     Returns:
-        tuple: (Runner, metrics_plugin or None)
+        tuple: (Runner, metrics_plugin or None, session_id)
             - Runner: Configured runner with InMemorySessionService
             - metrics_plugin: ResumeOptimizationMetricsPlugin instance if in development, None otherwise
+            - session_id: ID of the session with initial state
     """
 
     # Create the app with plugins
@@ -72,6 +73,13 @@ def create_runner():
 
     # Create session service (InMemorySessionService for gen1)
     session_service = InMemorySessionService()
+
+    # Create a session with initial state (async operation)
+    session = await session_service.create_session(
+        app_name="resume_optimizer_app",
+        user_id="default_user",
+        state=initial_state
+    )
 
     # Create runner
     runner = Runner(
@@ -81,4 +89,4 @@ def create_runner():
 
     print(f"Runner configured ({ENV} mode) with InMemorySessionService")
 
-    return runner, metrics_plugin
+    return runner, metrics_plugin, session.id

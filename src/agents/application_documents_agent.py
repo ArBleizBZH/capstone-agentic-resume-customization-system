@@ -6,25 +6,21 @@ Based on Day 2b notebook patterns.
 from pathlib import Path
 from google.adk.agents import LlmAgent
 from google.adk.models.google_llm import Gemini
-from google.adk.tools import AgentTool
-from google.adk.tools.mcp_tool.mcp_toolset import McpToolset
-from google.adk.tools.mcp_tool.mcp_session_manager import StdioConnectionParams
-from mcp import StdioServerParameters
-
+from google.adk.tools import AgentTool, ToolContext, FunctionTool
 from src.config.model_config import GEMINI_FLASH_MODEL, retry_config, GOOGLE_API_KEY
 
 
 def create_application_documents_agent():
     """Create and return the Application Documents Agent.
 
-    This agent coordinates the complete document processing workflow:
-    1. Loads resume and job description files using MCP filesystem
-    2. Delegates to ingest agents to convert raw documents to structured dicts
-    3. Ingest agents save dicts directly to session state
-    4. Returns success confirmation to parent agent
+This agent coordinates the complete document processing workflow:
+    1. Delegates to resume_ingest_agents to convert raw document from session state to structured resume_dict
+    2. Delegates to job_description_ingest_agents to convert raw document from session state to structured job_description_dict
+    3. Ingest agents save their resulting dicts to session state
+    5. Returns success confirmation to parent agent
 
     Returns:
-        LlmAgent: The configured Application Documents Agent with MCP filesystem and ingest agents
+        LlmAgent: The configured Application Documents Agent with ingest agents
     """
     # Import ingest agents
     from src.agents.resume_ingest_agent import create_resume_ingest_agent
@@ -34,26 +30,8 @@ def create_application_documents_agent():
     job_description_ingest_agent = create_job_description_ingest_agent()
 
     # Use home directory path (no /mnt/) for WSL compatibility
-    mcp_dir = str(Path.home() / "capstone_mcp_test")
-
-    # Create MCP filesystem toolset
-    # Set cwd to the MCP directory so relative paths work correctly
-    # Use tool_filter to expose only canonical MCP tools per ADK documentation
-    filesystem_mcp = McpToolset(
-        connection_params=StdioConnectionParams(
-            server_params=StdioServerParameters(
-                command="npx",
-                args=[
-                    "-y",
-                    "@modelcontextprotocol/server-filesystem",
-                    mcp_dir
-                ],
-                cwd=mcp_dir,  # Run from the MCP directory
-            ),
-            timeout=30,
-        ),
-        tool_filter=['read_file', 'list_directory']  # Only expose canonical MCP tools per ADK docs
-    )
+    base_dir = str(Path.home() / "")
+    #TODO: join base_dir to file names    
 
     agent = LlmAgent(
         name="application_documents_agent",
@@ -67,57 +45,34 @@ def create_application_documents_agent():
 
 When asked to load documents:
 
-**STEP 1: LOAD RESUME FILE**
-Call the read_file tool with path="resume.md"
-Wait for the response and store the resume text content.
+**STEP 1: CALL RESUME INGEST AGENT (MUST BE FIRST)**
+Call resume_ingest_agent with request: "Please parse resume content from session state"
+Wait for its full response.
 
-**STEP 2: LOAD JOB DESCRIPTION FILE**
-Call the read_file tool with path="job_description.md"
-Wait for the response and store the job description text content.
+**STEP 2: CHECK STEP 1 RESPONSE AND CONTINUE**
+Check for the keyword "ERROR:". If found, return error and stop.
+If "SUCCESS:", proceed to Step 3.
 
-**STEP 3: CHECK FOR FILE READ ERRORS AND CONTINUE**
-If either file read failed, log the error and return "ERROR: [application_documents_agent] <INSERT FULL FILE READ ERROR MESSAGE HERE>" to the parent agent and stop.
-If files loaded successfully: YOU MUST IMMEDIATELY CONTINUE TO STEP 4
-DO NOT STOP after loading files - this is only the beginning of the workflow
+**STEP 3: CALL JOB DESCRIPTION INGEST AGENT (MUST BE SECOND)**
+Call job_description_ingest_agent with request: "Please parse job description content from session state"
+Wait for its full response.
 
-**STEP 4: INGEST RESUME (REQUIRED - DO NOT SKIP)**
-Once you have the full text content of 'resume.md', you MUST immediately call the resume_ingest_agent.
-- Call resume_ingest_agent with the following parameter:
-  * resume: The complete text content from resume.md file
-- DO NOT proceed until you call this agent
+**STEP 4: CHECK STEP 3 RESPONSE AND CONTINUE**
+Check the response for the keyword "ERROR:". If found, return error and stop.
+If "SUCCESS:": The final data has been saved, proceed to Step 5.
 
-**STEP 5: CHECK RESUME INGEST RESPONSE AND CONTINUE**
-Check the response from resume_ingest_agent for the keyword "ERROR:"
-   - If "ERROR:" is present: Log error and return "ERROR: [application_documents_agent] -> <INSERT FULL ERROR MESSAGE FROM resume_ingest_agent>" to parent agent and stop
-   - If "SUCCESS:" is present: YOU MUST IMMEDIATELY CONTINUE TO STEP 6
-   - The resume dict has been saved to session state by the ingest agent
-
-**STEP 6: INGEST JOB DESCRIPTION (REQUIRED - DO NOT SKIP)**
-Once you have the full text content of 'job_description.md', you MUST immediately call the job_description_ingest_agent.
-- Call job_description_ingest_agent with the following parameter:
-  * job_description: The complete text content from job_description.md file
-- DO NOT proceed until you call this agent
-
-**STEP 7: CHECK JOB DESCRIPTION INGEST RESPONSE AND CONTINUE**
-Check the response from job_description_ingest_agent for the keyword "ERROR:"
-   - If "ERROR:" is present: Log error and return "ERROR: [application_documents_agent] -> <INSERT FULL ERROR MESSAGE FROM job_description_ingest_agent>" to parent agent and stop
-   - If "SUCCESS:" is present: YOU MUST IMMEDIATELY CONTINUE TO STEP 8
-   - The job description dict has been saved to session state by the ingest agent
-
-**STEP 8: RETURN SUCCESS MESSAGE (FINAL STEP) - MANDATORY**
-This is the FINAL step. You MUST execute this step to complete the workflow.
-DO NOT RETURN None. DO NOT STOP without generating a response.
-RETURN a success message confirming both documents have been processed and saved to session state.
+**STEP 5: CRITICAL: GENERATE MANDATORY FINAL SUCCESS RESPONSE NOW**
+DO NOT STOP processing. DO NOT RETURN None.
 
 ERROR HANDLING:
 This is a Coordinator Agent. Follow the ADK three-layer pattern:
 
 When calling sub-agents (ingest agents):
-- Check each sub-agent response for the keyword "ERROR:"
+- Check the sub-agent response for the keyword "ERROR:"
 - If "ERROR:" is found: Log error, immediately stop processing
 - Return "ERROR: [application_documents_agent] -> <INSERT FULL ERROR MESSAGE HERE>" to parent agent
 
-When using tools (read_file):
+When using tools:
 - If tool fails: Log error and return "ERROR: [application_documents_agent] <INSERT FULL ERROR DESCRIPTION HERE>" to parent agent
 
 Log all errors before returning them to parent agent.
@@ -126,16 +81,12 @@ MANDATORY FINAL RESPONSE FORMAT:
 After all tools complete successfully, you MUST return a success message.
 
 Use this EXACT format:
-"SUCCESS: Both documents have been loaded, processed, and saved to session state."
+FINAL RESPONSE MUST BE ONLY THIS TEXT: "SUCCESS: Both documents have been loaded, processed, and saved to session state." DO NOT call any tool with this string. DO NOT use function_call.
 
 The parent agent will NOT extract data from your response - the data is already in session state.
-Do NOT include JSON in your response - it's already in session state.
 
-Always pass complete text content to ingest agents as parameters, not variable names.
-Use the canonical 'read_file' tool name for MCP filesystem operations.
 """,
         tools=[
-            filesystem_mcp,
             AgentTool(agent=resume_ingest_agent),
             AgentTool(agent=job_description_ingest_agent),
         ],

@@ -3,7 +3,6 @@
 Based on Day 1a and Day 2a notebook patterns for LlmAgent with AgentTool.
 """
 
-import json
 from typing import List, Dict, Any
 from google.adk.agents import LlmAgent
 from google.adk.models.google_llm import Gemini
@@ -11,6 +10,7 @@ from google.adk.tools import AgentTool
 from google.adk.tools.tool_context import ToolContext
 from google.genai import types
 from src.config.model_config import GEMINI_FLASH_MODEL, retry_config, GOOGLE_API_KEY
+from src.tools.session_tools import read_from_session
 
 
 def save_quality_matches_to_session(tool_context: ToolContext, quality_matches: List[Dict[str, Any]]) -> dict:
@@ -45,38 +45,6 @@ def save_quality_matches_to_session(tool_context: ToolContext, quality_matches: 
         }
 
 
-def save_possible_matches_to_session(tool_context: ToolContext, possible_quality_matches: List[Dict[str, Any]]) -> dict:
-    """Save possible quality matches to session state (for internal processing).
-
-    Args:
-        tool_context: ADK tool context with state access
-        possible_quality_matches: List containing possible match objects
-
-    Returns:
-        Dictionary with status and message
-    """
-    try:
-        if not isinstance(possible_quality_matches, list):
-            return {
-                "status": "error",
-                "message": "possible_quality_matches must be a list"
-            }
-
-        tool_context.state["possible_quality_matches"] = possible_quality_matches
-
-        return {
-            "status": "success",
-            "message": f"Saved {len(possible_quality_matches)} possible matches to session state for validation",
-            "match_count": len(possible_quality_matches)
-        }
-
-    except Exception as e:
-        return {
-            "status": "error",
-            "message": f"Failed to save possible matches to session: {str(e)}"
-        }
-
-
 def create_qualifications_checker_agent():
     """Create and return the Qualifications Checker Agent.
 
@@ -108,16 +76,12 @@ def create_qualifications_checker_agent():
 WORKFLOW:
 
 Step 1: READ FROM SESSION STATE
-- Read all data from session state:
-  * resume_dict = state.get('resume_dict')
-  * job_description_dict = state.get('job_description_dict')
-  * quality_matches = state.get('quality_matches')
-  * possible_quality_matches = state.get('possible_quality_matches')
+- Call read_from_session with key="resume_dict" and extract from "value" field
+- Call read_from_session with key="job_description_dict" and extract from "value" field
+- Call read_from_session with key="quality_matches" and extract from "value" field
+- Call read_from_session with key="possible_quality_matches" and extract from "value" field
+- Check each response: if "found" is false for any required key, return "ERROR: [qualifications_checker_agent] Missing required data in session state" and stop
 - These are Python objects (dicts and lists) - access data directly (no parsing needed)
-- If any required data is missing or empty:
-  * Log the error
-  * Return "ERROR: [qualifications_checker_agent] Missing required data in session state"
-  * Stop processing
 
 Step 2: VERIFY AND REFINE MATCHES
 - You now have quality_matches and possible_quality_matches as Python lists
@@ -125,22 +89,15 @@ Step 2: VERIFY AND REFINE MATCHES
 - Apply a HIGH THRESHOLD of validation (virtual certainty required)
 - If validated, move the match to the quality_matches list
 - If not validated, discard the match entirely
-- The final quality_matches list should be the union of the original quality matches and the verified possible matches
+- The final quality_matches list should be the union of the original quality_matches and the verified possible_quality_matches
 
 Step 3: SAVE QUALITY_MATCHES TO SESSION STATE
-- Call save_quality_matches_to_session with quality_matches parameter only (pass the Python list directly, not JSON)
+- Call save_quality_matches_to_session with quality_matches parameter only (pass the Python list directly)
 - Note: ADK framework automatically provides tool_context - do not pass it explicitly
 - If the tool response indicates "error": Log the error and return "ERROR: [qualifications_checker_agent] <INSERT ERROR MESSAGE FROM TOOL>" to the parent agent, then STOP.
 
-Step 4: SAVE POSSIBLE_QUALITY_MATCHES TO SESSION STATE
-- The final, empty possible_quality_matches list (after verification and discarding) should be an empty Python list []
-- Call save_possible_matches_to_session with possible_quality_matches parameter only (pass the empty Python list directly, not JSON)
-- Note: ADK framework automatically provides tool_context - do not pass it explicitly
-- If the tool response indicates "error": Log the error and return "ERROR: [qualifications_checker_agent] <INSERT ERROR MESSAGE FROM TOOL>" to the parent agent, then STOP.
-- If the tool response is "success": DO NOT STOP. Immediately proceed to Step 5.
-
-Step 5: RETURN SUCCESS MESSAGE - CRITICAL
-After both save tools complete successfully, you MUST generate a final text response.
+Step 4: RETURN SUCCESS MESSAGE - CRITICAL
+After the save tool complete successfully, you MUST generate a final text response.
 **DO NOT RETURN None** or empty content.
 **DO NOT STOP** after the tool calls without generating this response.
 
@@ -184,8 +141,8 @@ CRITICAL PRINCIPLES:
 5. YOU ARE A WORKER: You do NOT call other agents - parent orchestrator (Resume Refiner) calls the next agent
 """,
         tools=[
+            read_from_session,
             save_quality_matches_to_session,
-            save_possible_matches_to_session,
         ],
     )
 

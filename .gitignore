@@ -58,7 +58,13 @@ src/agents/ENGINEERING_GUIDE.md
 
 # Exclude temporary and context files
 SPRINT_*_STATUS.md
+test_runs_output/
 test_output.txt
+job_description.md
+mytextfile.txt
+README_OLD.md
+resume.md
+test_reader_agent.py
 
 # Test data (if sensitive)
 data/resumes/

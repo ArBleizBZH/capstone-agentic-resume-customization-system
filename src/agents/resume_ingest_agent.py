@@ -9,6 +9,7 @@ from google.adk.models.google_llm import Gemini
 from google.adk.tools.tool_context import ToolContext
 from google.genai import types
 from src.config.model_config import GEMINI_FLASH_MODEL, retry_config, GOOGLE_API_KEY
+from src.tools.session_tools import read_from_session
 
 
 def save_resume_dict_to_session(tool_context: ToolContext, resume_dict: dict) -> dict:
@@ -67,8 +68,8 @@ def save_resume_dict_to_session(tool_context: ToolContext, resume_dict: dict) ->
 def create_resume_ingest_agent():
     """Create and return the Resume Ingest Agent.
 
-    This agent converts resume text into structured JSON following
-    the Tier 1 core schema. It emphasizes high-fidelity extraction with
+    This agent converts resume text into a python dict following
+    the standard resume schema. It emphasizes high-fidelity extraction with
     no fabrication of data.
 
     Returns:
@@ -89,16 +90,27 @@ def create_resume_ingest_agent():
                 )
             )
         ),
-        description="Converts resume text to structured Python dict using Tier 1 core schema.",
+        description="Converts resume text to structured Python dict using the DICT SCHEMA defined below.",
         instruction="""You are the Resume Ingest Agent.
-Your Goal: Convert resume text into a structured Python dictionary that enables precise qualification matching.
+Your Goal: Convert resume text into a structured Python dictionary that enables precise qualification matching and is saved to session state as "resume_dict".
 
 WORKFLOW:
 
-1. **RECEIVE CONTENT**: You will receive resume text as the 'resume' parameter.
-2. **PARSE TO DICT**: Extract and structure the content into a Python dictionary following the required schema (contact_info, profile_summary, work_history, skills, education, certifications_licenses).
-3. **SAVE TO SESSION**: Call `save_resume_dict_to_session` with the Python dictionary.
-4. **GENERATE FINAL RESPONSE**: After the save tool completes successfully, you MUST generate a simple text response.
+Step 1: READ RESUME FROM SESSION STATE
+- Call read_from_session with key="resume" to retrieve the raw resume text
+- Check the response: if "found" is false, return "ERROR: [resume_ingest_agent] Resume not found in session state" and stop
+- Extract the resume text from the "value" field in the response
+
+Step 2: PARSE TO DICT
+- Extract and structure the content into a Python dictionary following the required schema (contact_info, profile_summary, work_history, skills, education, certifications_licenses)
+
+Step 3: SAVE TO SESSION
+- Call save_resume_dict_to_session with the Python dictionary
+- Check the tool response for status: "error"
+- If status is "error": Return "ERROR: [resume_ingest_agent] <INSERT ERROR MESSAGE FROM TOOL>" and stop
+
+Step 4: GENERATE FINAL RESPONSE
+- After the save tool completes successfully, you MUST generate a simple text response
 
 **CRITICAL**: Steps 3 and 4 are BOTH required. Do NOT stop after calling the save tool.
 **DO NOT RETURN None** or empty content after the tool completes.
@@ -132,6 +144,7 @@ After the save tool returns success, you MUST generate this exact response:
 "SUCCESS: Resume content processed and structured dict saved to session state."
 """,
         tools=[
+            read_from_session,
             save_resume_dict_to_session,
         ],
     )

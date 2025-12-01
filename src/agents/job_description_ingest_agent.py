@@ -3,12 +3,12 @@
 Based on Day 2a notebook patterns for LlmAgent with tool functions.
 """
 
-import json
 from google.adk.agents import LlmAgent
 from google.adk.models.google_llm import Gemini
 from google.adk.tools.tool_context import ToolContext
 from google.genai import types
 from src.config.model_config import GEMINI_FLASH_MODEL, retry_config, GOOGLE_API_KEY
+from src.tools.session_tools import read_from_session
 
 
 def save_job_description_dict_to_session(tool_context: ToolContext, job_description_dict: dict) -> dict:
@@ -70,7 +70,7 @@ def save_job_description_dict_to_session(tool_context: ToolContext, job_descript
 def create_job_description_ingest_agent():
     """Create and return the Job Description Ingest Agent.
 
-    This agent converts job description text into structured JSON with
+    This agent converts job description text into a structured python dict with
     categorized qualifications (Option B structure) optimized for matching.
 
     Returns:
@@ -93,14 +93,25 @@ def create_job_description_ingest_agent():
         ),
         description="Converts job description text to structured Python dict with categorized qualifications.",
         instruction="""You are the Job Description Ingest Agent.
-Your Goal: Convert job description text into a structured Python dictionary with categorized qualifications.
+Your Goal: Convert job description text into a structured Python dictionary with categorized qualifications that is saved in session state as "job_description_dict".
 
 WORKFLOW:
 
-1. **RECEIVE CONTENT**: You will receive job description text as the 'job_description' parameter.
-2. **PARSE TO DICT**: Extract and structure the content into a Python dictionary named 'job_description_dict' and following the required schema (job_info, responsibilities, qualifications, benefits).
-3. **SAVE TO SESSION**: Call `save_job_description_dict_to_session` with 'job_description_dict' as parameter.
-4. **GENERATE FINAL RESPONSE**: After the save tool completes successfully, you MUST generate a simple text response.
+Step 1: READ JOB DESCRIPTION FROM SESSION STATE
+- Call read_from_session with key="job_description" to retrieve the raw job description text
+- Check the response: if "found" is false, return "ERROR: [job_description_ingest_agent] Job description not found in session state" and stop
+- Extract the job description text from the "value" field in the response
+
+Step 2: PARSE TO DICT
+- Extract and structure the content into a Python dictionary named 'job_description_dict' following the required schema (job_info, responsibilities, qualifications, benefits)
+
+Step 3: SAVE TO SESSION
+- Call save_job_description_dict_to_session with 'job_description_dict' as parameter
+- Check the tool response for status: "error"
+- If status is "error": Return "ERROR: [job_description_ingest_agent] <INSERT ERROR MESSAGE FROM TOOL>" and stop
+
+Step 4: GENERATE FINAL RESPONSE
+- After the save tool completes successfully, you MUST generate a simple text response
 
 **CRITICAL**: Steps 3 and 4 are BOTH required. Do NOT stop after calling the save tool.
 **DO NOT RETURN None** or empty content after the tool completes.
@@ -110,7 +121,7 @@ CRITICAL RULES:
 - Extract ONLY information explicitly stated in the source
 - Omit empty/null fields - don't include keys with no data
 - Categorize qualifications: required vs preferred, technical_skills vs domain_knowledge
-- Generate a Python dict structure, NOT a JSON string
+- Generate a Python dict structure
 - **AFTER save tool succeeds: You MUST generate the final response below**
 - **DO NOT STOP after tool call - continue to Step 4**
 
@@ -129,6 +140,7 @@ After the save tool returns success, you MUST generate this exact response:
 "SUCCESS: Job description content processed and structured dict saved to session state."
 """,
         tools=[
+            read_from_session,
             save_job_description_dict_to_session,
         ],
     )
