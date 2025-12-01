@@ -92,12 +92,15 @@ def create_resume_ingest_agent():
         ),
         description="Converts resume text to structured Python dict using the DICT SCHEMA defined below.",
         instruction="""You are the Resume Ingest Agent.
-Your Goal: Convert resume text into a structured Python dictionary that enables precise qualification matching and is saved to session state as "resume_dict".
+Your Goal: Use read_from_session(key='resume') to read the resume. Then convert the resume into a structured Python dictionary that enables precise qualification matching and is saved to session state as "resume_dict" using save_resume_dict_to_session.
 
 WORKFLOW:
 
 Step 1: READ RESUME FROM SESSION STATE
-- Call read_from_session with key="resume" to retrieve the raw resume text
+- TOOL CALL: Use the `read_from_session` tool with 'resume' as key to retrieve the raw resume. THE ONLY KEY YOU ARE ALLOWED TO USE IS: key='resume'.
+# tool_code_block_start
+read_from_session(key='resume')
+# tool_code_block_end
 - Check the response: if "found" is false, return "ERROR: [resume_ingest_agent] Resume not found in session state" and stop
 - Extract the resume text from the "value" field in the response
 
@@ -143,7 +146,8 @@ After the save tool returns success, you MUST generate this exact response:
 
 "SUCCESS: Resume content processed and structured dict saved to session state."
 """,
-        tools=[
+
+    tools=[
             read_from_session,
             save_resume_dict_to_session,
         ],

@@ -1,0 +1,276 @@
+Cleaned up logs/logger.log
+Cleaned up logs/web.log
+Cleaned up logs/metrics.log
+Development mode: DEBUG logging enabled
+Logging configured (development mode)
+  Main log: logs/logger.log (DEBUG)
+  Web log: logs/web.log (DEBUG)
+  Metrics log: logs/metrics.log (INFO)
+  Console: DEBUG
+
+============================================================
+Resume Optimization System - Sprint 012 E2E Test
+============================================================
+
+Processing key: resume, file_path: /mnt/e/_Data/_Education/DataScience/Google_AI_Agents_Intensive/CAPSTONE_ANTIGRAVITY/resume.md
+Processing key: job_description, file_path: /mnt/e/_Data/_Education/DataScience/Google_AI_Agents_Intensive/CAPSTONE_ANTIGRAVITY/mytextfile.txt
+Creating runner...
+Development plugins loaded: LoggingPlugin, ResumeOptimizationMetricsPlugin
+Runner configured (development mode) with InMemorySessionService
+
+Running full workflow with input files...
+
+ ### Created new session: 7d31c419-fe55-485e-a6cd-58f09ed194df
+
+User > Please optimize my resume for this job application. Resume file: resume.md. Job description file: job_description.md.
+[90m[logging_plugin] 🚀 USER MESSAGE RECEIVED[0m
+[90m[logging_plugin]    Invocation ID: e-feb83b4f-fbe3-4ee7-95f6-8c5dd015683d[0m
+[90m[logging_plugin]    Session ID: 7d31c419-fe55-485e-a6cd-58f09ed194df[0m
+[90m[logging_plugin]    User ID: debug_user_id[0m
+[90m[logging_plugin]    App Name: resume_optimizer_app[0m
+[90m[logging_plugin]    Root Agent: job_application_agent[0m
+[90m[logging_plugin]    User Content: text: 'Please optimize my resume for this job application. Resume file: resume.md. Job description file: job_description.md.'[0m
+[90m[logging_plugin] 🏃 INVOCATION STARTING[0m
+[90m[logging_plugin]    Invocation ID: e-feb83b4f-fbe3-4ee7-95f6-8c5dd015683d[0m
+[90m[logging_plugin]    Starting Agent: job_application_agent[0m
+[90m[logging_plugin] 🤖 AGENT STARTING[0m
+[90m[logging_plugin]    Agent Name: job_application_agent[0m
+[90m[logging_plugin]    Invocation ID: e-feb83b4f-fbe3-4ee7-95f6-8c5dd015683d[0m
+[90m[logging_plugin] 🧠 LLM REQUEST[0m
+[90m[logging_plugin]    Model: gemini-2.5-flash-lite[0m
+[90m[logging_plugin]    Agent: job_application_agent[0m
+[90m[logging_plugin]    System Instruction: 'You are the Job Application Agent, the root orchestrator responsible for
+coordinating the complete resume customization workflow.
+
+ROLE AND AUTHORITY:
+You orchestrate the entire resume optimization pr...'[0m
+[90m[logging_plugin]    Available Tools: ['transfer_to_agent', 'application_documents_agent', 'resume_refiner_agent'][0m
+[90m[logging_plugin] 🧠 LLM RESPONSE[0m
+[90m[logging_plugin]    Agent: job_application_agent[0m
+[90m[logging_plugin]    Content: function_call: application_documents_agent[0m
+[90m[logging_plugin]    Token Usage - Input: 1310, Output: 26[0m
+[90m[logging_plugin] 📢 EVENT YIELDED[0m
+[90m[logging_plugin]    Event ID: 72530c29-7357-466c-9203-593a1100d1c4[0m
+[90m[logging_plugin]    Author: job_application_agent[0m
+[90m[logging_plugin]    Content: function_call: application_documents_agent[0m
+[90m[logging_plugin]    Final Response: False[0m
+[90m[logging_plugin]    Function Calls: ['application_documents_agent'][0m
+[90m[logging_plugin] 🔧 TOOL STARTING[0m
+[90m[logging_plugin]    Tool Name: application_documents_agent[0m
+[90m[logging_plugin]    Agent: job_application_agent[0m
+[90m[logging_plugin]    Function Call ID: adk-351fdb5a-11da-4fc1-9356-5b258abbe0f5[0m
+[90m[logging_plugin]    Arguments: {'request': 'load resume.md and job_description.md'}[0m
+[90m[logging_plugin] 🚀 USER MESSAGE RECEIVED[0m
+[90m[logging_plugin]    Invocation ID: e-a548528c-1cc7-4d69-b3bd-d11685e28646[0m
+[90m[logging_plugin]    Session ID: e1ca257d-a4bc-43a1-8546-450b849dc9c2[0m
+[90m[logging_plugin]    User ID: debug_user_id[0m
+[90m[logging_plugin]    App Name: resume_optimizer_app[0m
+[90m[logging_plugin]    Root Agent: application_documents_agent[0m
+[90m[logging_plugin]    User Content: text: 'load resume.md and job_description.md'[0m
+[90m[logging_plugin] 🏃 INVOCATION STARTING[0m
+[90m[logging_plugin]    Invocation ID: e-a548528c-1cc7-4d69-b3bd-d11685e28646[0m
+[90m[logging_plugin]    Starting Agent: application_documents_agent[0m
+[90m[logging_plugin] 🤖 AGENT STARTING[0m
+[90m[logging_plugin]    Agent Name: application_documents_agent[0m
+[90m[logging_plugin]    Invocation ID: e-a548528c-1cc7-4d69-b3bd-d11685e28646[0m
+[90m[logging_plugin] 🧠 LLM REQUEST[0m
+[90m[logging_plugin]    Model: gemini-2.5-flash-lite[0m
+[90m[logging_plugin]    Agent: application_documents_agent[0m
+[90m[logging_plugin]    System Instruction: 'You coordinate loading and processing application documents.
+
+When asked to load documents:
+
+**STEP 1: CALL RESUME INGEST AGENT (MUST BE FIRST)**
+Call resume_ingest_agent with request: "Please parse r...'[0m
+[90m[logging_plugin]    Available Tools: ['transfer_to_agent', 'resume_ingest_agent', 'job_description_ingest_agent'][0m
+[90m[logging_plugin] 🧠 LLM RESPONSE[0m
+[90m[logging_plugin]    Agent: application_documents_agent[0m
+[90m[logging_plugin]    Content: function_call: resume_ingest_agent[0m
+[90m[logging_plugin]    Token Usage - Input: 965, Output: 24[0m
+[90m[logging_plugin] 📢 EVENT YIELDED[0m
+[90m[logging_plugin]    Event ID: 7b6fe9ce-145a-4690-8b64-9bc011dee713[0m
+[90m[logging_plugin]    Author: application_documents_agent[0m
+[90m[logging_plugin]    Content: function_call: resume_ingest_agent[0m
+[90m[logging_plugin]    Final Response: False[0m
+[90m[logging_plugin]    Function Calls: ['resume_ingest_agent'][0m
+[90m[logging_plugin] 🔧 TOOL STARTING[0m
+[90m[logging_plugin]    Tool Name: resume_ingest_agent[0m
+[90m[logging_plugin]    Agent: application_documents_agent[0m
+[90m[logging_plugin]    Function Call ID: adk-4564dc27-ba6f-43e9-bd50-3f44c19829dd[0m
+[90m[logging_plugin]    Arguments: {'request': 'Please parse resume content from session state'}[0m
+[90m[logging_plugin] 🚀 USER MESSAGE RECEIVED[0m
+[90m[logging_plugin]    Invocation ID: e-ba23e15f-b3e2-46c2-b826-99287a36ad26[0m
+[90m[logging_plugin]    Session ID: ba6c2009-f340-41aa-8ca3-36d4860d34b0[0m
+[90m[logging_plugin]    User ID: debug_user_id[0m
+[90m[logging_plugin]    App Name: resume_optimizer_app[0m
+[90m[logging_plugin]    Root Agent: resume_ingest_agent[0m
+[90m[logging_plugin]    User Content: text: 'Please parse resume content from session state'[0m
+[90m[logging_plugin] 🏃 INVOCATION STARTING[0m
+[90m[logging_plugin]    Invocation ID: e-ba23e15f-b3e2-46c2-b826-99287a36ad26[0m
+[90m[logging_plugin]    Starting Agent: resume_ingest_agent[0m
+[90m[logging_plugin] 🤖 AGENT STARTING[0m
+[90m[logging_plugin]    Agent Name: resume_ingest_agent[0m
+[90m[logging_plugin]    Invocation ID: e-ba23e15f-b3e2-46c2-b826-99287a36ad26[0m
+[90m[logging_plugin] 🧠 LLM REQUEST[0m
+[90m[logging_plugin]    Model: gemini-2.5-flash-lite[0m
+[90m[logging_plugin]    Agent: resume_ingest_agent[0m
+[90m[logging_plugin]    System Instruction: 'You are the Resume Ingest Agent.
+Your Goal: Convert resume text into a structured Python dictionary that enables precise qualification matching and is saved to session state as "resume_dict".
+
+WORKFLO...'[0m
+[90m[logging_plugin]    Available Tools: ['transfer_to_agent', 'read_from_session', 'save_resume_dict_to_session'][0m
+[90m[logging_plugin] 🧠 LLM RESPONSE[0m
+[90m[logging_plugin]    Agent: resume_ingest_agent[0m
+[90m[logging_plugin]    Content: function_call: read_from_session[0m
+[90m[logging_plugin]    Token Usage - Input: 1217, Output: 17[0m
+[90m[logging_plugin] 📢 EVENT YIELDED[0m
+[90m[logging_plugin]    Event ID: 6707b589-2d8b-4791-8daf-d3f52d99e406[0m
+[90m[logging_plugin]    Author: resume_ingest_agent[0m
+[90m[logging_plugin]    Content: function_call: read_from_session[0m
+[90m[logging_plugin]    Final Response: False[0m
+[90m[logging_plugin]    Function Calls: ['read_from_session'][0m
+[90m[logging_plugin] 🔧 TOOL STARTING[0m
+[90m[logging_plugin]    Tool Name: read_from_session[0m
+[90m[logging_plugin]    Agent: resume_ingest_agent[0m
+[90m[logging_plugin]    Function Call ID: adk-afb3ed6e-9a87-422f-a798-d6cdfddd97e5[0m
+[90m[logging_plugin]    Arguments: {'key': 'resume'}[0m
+[90m[logging_plugin] 🔧 TOOL COMPLETED[0m
+[90m[logging_plugin]    Tool Name: read_from_session[0m
+[90m[logging_plugin]    Agent: resume_ingest_agent[0m
+[90m[logging_plugin]    Function Call ID: adk-afb3ed6e-9a87-422f-a798-d6cdfddd97e5[0m
+[90m[logging_plugin]    Result: {'key': 'resume', 'value': None, 'found': False}[0m
+[90m[logging_plugin] 📢 EVENT YIELDED[0m
+[90m[logging_plugin]    Event ID: db32f8e5-0820-471b-aad8-7846463824ee[0m
+[90m[logging_plugin]    Author: resume_ingest_agent[0m
+[90m[logging_plugin]    Content: function_response: read_from_session[0m
+[90m[logging_plugin]    Final Response: False[0m
+[90m[logging_plugin]    Function Responses: ['read_from_session'][0m
+[90m[logging_plugin] 🧠 LLM REQUEST[0m
+[90m[logging_plugin]    Model: gemini-2.5-flash-lite[0m
+[90m[logging_plugin]    Agent: resume_ingest_agent[0m
+[90m[logging_plugin]    System Instruction: 'You are the Resume Ingest Agent.
+Your Goal: Convert resume text into a structured Python dictionary that enables precise qualification matching and is saved to session state as "resume_dict".
+
+WORKFLO...'[0m
+[90m[logging_plugin]    Available Tools: ['transfer_to_agent', 'read_from_session', 'save_resume_dict_to_session'][0m
+[90m[logging_plugin] 🧠 LLM RESPONSE[0m
+[90m[logging_plugin]    Agent: resume_ingest_agent[0m
+[90m[logging_plugin]    Content: text: 'ERROR: [resume_ingest_agent] Resume not found in session state'[0m
+[90m[logging_plugin]    Token Usage - Input: 1261, Output: 16[0m
+[90m[logging_plugin] 📢 EVENT YIELDED[0m
+[90m[logging_plugin]    Event ID: cb9bb55d-0923-4f98-81c4-16f9f80b4e90[0m
+[90m[logging_plugin]    Author: resume_ingest_agent[0m
+[90m[logging_plugin]    Content: text: 'ERROR: [resume_ingest_agent] Resume not found in session state'[0m
+[90m[logging_plugin]    Final Response: True[0m
+[90m[logging_plugin] 🤖 AGENT COMPLETED[0m
+[90m[logging_plugin]    Agent Name: resume_ingest_agent[0m
+[90m[logging_plugin]    Invocation ID: e-ba23e15f-b3e2-46c2-b826-99287a36ad26[0m
+[90m[logging_plugin] ✅ INVOCATION COMPLETED[0m
+[90m[logging_plugin]    Invocation ID: e-ba23e15f-b3e2-46c2-b826-99287a36ad26[0m
+[90m[logging_plugin]    Final Agent: resume_ingest_agent[0m
+[90m[logging_plugin] 🔧 TOOL COMPLETED[0m
+[90m[logging_plugin]    Tool Name: resume_ingest_agent[0m
+[90m[logging_plugin]    Agent: application_documents_agent[0m
+[90m[logging_plugin]    Function Call ID: adk-4564dc27-ba6f-43e9-bd50-3f44c19829dd[0m
+[90m[logging_plugin]    Result: ERROR: [resume_ingest_agent] Resume not found in session state[0m
+[90m[logging_plugin] 📢 EVENT YIELDED[0m
+[90m[logging_plugin]    Event ID: 1c214149-5e43-4e3a-af43-996d3ccd991a[0m
+[90m[logging_plugin]    Author: application_documents_agent[0m
+[90m[logging_plugin]    Content: function_response: resume_ingest_agent[0m
+[90m[logging_plugin]    Final Response: False[0m
+[90m[logging_plugin]    Function Responses: ['resume_ingest_agent'][0m
+[90m[logging_plugin] 🧠 LLM REQUEST[0m
+[90m[logging_plugin]    Model: gemini-2.5-flash-lite[0m
+[90m[logging_plugin]    Agent: application_documents_agent[0m
+[90m[logging_plugin]    System Instruction: 'You coordinate loading and processing application documents.
+
+When asked to load documents:
+
+**STEP 1: CALL RESUME INGEST AGENT (MUST BE FIRST)**
+Call resume_ingest_agent with request: "Please parse r...'[0m
+[90m[logging_plugin]    Available Tools: ['transfer_to_agent', 'resume_ingest_agent', 'job_description_ingest_agent'][0m
+[90m[logging_plugin] 🧠 LLM RESPONSE[0m
+[90m[logging_plugin]    Agent: application_documents_agent[0m
+[90m[logging_plugin]    Content: text: 'ERROR: [application_documents_agent] -> ERROR: [resume_ingest_agent] Resume not found in session state'[0m
+[90m[logging_plugin]    Token Usage - Input: 1022, Output: 26[0m
+[90m[logging_plugin] 📢 EVENT YIELDED[0m
+[90m[logging_plugin]    Event ID: 19d6ff04-6d78-41fa-91aa-7226cd53aa93[0m
+[90m[logging_plugin]    Author: application_documents_agent[0m
+[90m[logging_plugin]    Content: text: 'ERROR: [application_documents_agent] -> ERROR: [resume_ingest_agent] Resume not found in session state'[0m
+[90m[logging_plugin]    Final Response: True[0m
+[90m[logging_plugin] 🤖 AGENT COMPLETED[0m
+[90m[logging_plugin]    Agent Name: application_documents_agent[0m
+[90m[logging_plugin]    Invocation ID: e-a548528c-1cc7-4d69-b3bd-d11685e28646[0m
+[90m[logging_plugin] ✅ INVOCATION COMPLETED[0m
+[90m[logging_plugin]    Invocation ID: e-a548528c-1cc7-4d69-b3bd-d11685e28646[0m
+[90m[logging_plugin]    Final Agent: application_documents_agent[0m
+[90m[logging_plugin] 🔧 TOOL COMPLETED[0m
+[90m[logging_plugin]    Tool Name: application_documents_agent[0m
+[90m[logging_plugin]    Agent: job_application_agent[0m
+[90m[logging_plugin]    Function Call ID: adk-351fdb5a-11da-4fc1-9356-5b258abbe0f5[0m
+[90m[logging_plugin]    Result: ERROR: [application_documents_agent] -> ERROR: [resume_ingest_agent] Resume not found in session state[0m
+[90m[logging_plugin] 📢 EVENT YIELDED[0m
+[90m[logging_plugin]    Event ID: bde7f1d1-1918-493f-8079-8a579ca04661[0m
+[90m[logging_plugin]    Author: job_application_agent[0m
+[90m[logging_plugin]    Content: function_response: application_documents_agent[0m
+[90m[logging_plugin]    Final Response: False[0m
+[90m[logging_plugin]    Function Responses: ['application_documents_agent'][0m
+[90m[logging_plugin] 🧠 LLM REQUEST[0m
+[90m[logging_plugin]    Model: gemini-2.5-flash-lite[0m
+[90m[logging_plugin]    Agent: job_application_agent[0m
+[90m[logging_plugin]    System Instruction: 'You are the Job Application Agent, the root orchestrator responsible for
+coordinating the complete resume customization workflow.
+
+ROLE AND AUTHORITY:
+You orchestrate the entire resume optimization pr...'[0m
+[90m[logging_plugin]    Available Tools: ['transfer_to_agent', 'application_documents_agent', 'resume_refiner_agent'][0m
+[90m[logging_plugin] 🧠 LLM RESPONSE[0m
+[90m[logging_plugin]    Agent: job_application_agent[0m
+[90m[logging_plugin]    Content: text: 'ERROR: [job_application_agent] -> ERROR: [application_documents_agent] -> ERROR: [resume_ingest_agent] Resume not found in session state'[0m
+[90m[logging_plugin]    Token Usage - Input: 1378, Output: 36[0m
+[90m[logging_plugin] 📢 EVENT YIELDED[0m
+[90m[logging_plugin]    Event ID: d20c59df-d54d-4f84-b9a8-bc618ff8154a[0m
+[90m[logging_plugin]    Author: job_application_agent[0m
+[90m[logging_plugin]    Content: text: 'ERROR: [job_application_agent] -> ERROR: [application_documents_agent] -> ERROR: [resume_ingest_agent] Resume not found in session state'[0m
+[90m[logging_plugin]    Final Response: True[0m
+job_application_agent > ERROR: [job_application_agent] -> ERROR: [application_documents_agent] -> ERROR: [resume_ingest_agent] Resume not found in session state
+[90m[logging_plugin] 🤖 AGENT COMPLETED[0m
+[90m[logging_plugin]    Agent Name: job_application_agent[0m
+[90m[logging_plugin]    Invocation ID: e-feb83b4f-fbe3-4ee7-95f6-8c5dd015683d[0m
+[90m[logging_plugin] ✅ INVOCATION COMPLETED[0m
+[90m[logging_plugin]    Invocation ID: e-feb83b4f-fbe3-4ee7-95f6-8c5dd015683d[0m
+[90m[logging_plugin]    Final Agent: job_application_agent[0m
+
+============================================================
+Sprint 012 E2E Test Complete!
+============================================================
+
+Workflow executed.
+Logs saved to:
+  - logs/logger.log (main application log)
+  - logs/web.log (web UI log)
+  - logs/metrics.log (metrics-specific log)
+
+============================================================
+METRICS SUMMARY
+============================================================
+
+Agent Invocations:
+  Job Applications Processed: 1
+  Resume Refinements: 0
+  Qualifications Matches: 0
+  Critic Reviews: 0
+  Writing Generations: 0
+
+System Operations:
+  Total Agent Calls: 3
+  Total LLM Calls: 6
+  Total Tool Calls: 3
+  Total Errors: 0
+
+Performance:
+  Average Duration: 0.0s
+  Max Duration: 0.0s
+  Min Duration: 0.0s
+============================================================
+

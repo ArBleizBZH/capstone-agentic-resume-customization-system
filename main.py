@@ -3,7 +3,8 @@
 Sprint 012: End-to-end integration test with full workflow execution.
 Based on Day 1a, Day 3a, and Day 4a notebook patterns.
 """
-
+from pathlib import Path
+import os
 import asyncio
 from src.plugins import logging_config  # Initialize logging
 from src.app import create_runner
@@ -13,14 +14,12 @@ from pathlib import Path
 
 # CONFIG
 # Use home directory path (no /mnt/) for WSL compatibility
-#BASE_DIR = str(Path.home() / "")
-BASE_DIR = Path.home()
-
+BASE_DIR = Path(os.getcwd())
 
 # Query for the filenames
 #TODO: Add input for file names
 RESUME = "resume.md"
-JOB_DESCRIPTION = "mytextfile.txt"
+JOB_DESCRIPTION = "job_description.md"
 
 files_info= {
     "resume": str(BASE_DIR / RESUME),
@@ -37,10 +36,9 @@ def read_file(file_path):
             content = file.read()
             return content
     except FileNotFoundError:
-        return f"Error: The file '{file_path}' was not found in the current directory."
+        raise FileNotFoundError(f"The file '{file_path}' was not found.")
     except Exception as e:
-        return f"An unexpected error occurred: {e}"
-
+        raise Exception(f"An unexpected error occurred while reading '{file_path}': {e}")
 
 def read_files(files_info):
     """Reads the entire content of the files."""
@@ -57,9 +55,16 @@ def read_files(files_info):
         # ... process the key and file_path here ...
         print(f"Processing key: {key}, file_path: {file_path}")
         
-        # Call read_file and store the content in the results dictionary
-        file_content = read_file(file_path)
-        results[key] = file_content
+        try:        
+            # Call read_file and store the content in the results dictionary
+            file_content = read_file(file_path)
+            results[key] = file_content
+        except FileNotFoundError as e:
+            # Handle the specific error and do NOT save the key to Session State.
+            print(f"*** ERROR: File '{file_path}' not loaded for '{key}'. Details: {e}")
+        except Exception as e:
+            # Handle other, unexpected errors.
+            print(f"*** UNEXPECTED ERROR during file load for '{key}': {e}")        
         
     # Return the dictionary containing all file contents
     return results

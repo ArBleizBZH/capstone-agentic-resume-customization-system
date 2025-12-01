@@ -93,12 +93,12 @@ def create_job_description_ingest_agent():
         ),
         description="Converts job description text to structured Python dict with categorized qualifications.",
         instruction="""You are the Job Description Ingest Agent.
-Your Goal: Convert job description text into a structured Python dictionary with categorized qualifications that is saved in session state as "job_description_dict".
+Your Goal: Use read_from_session(key='job_description') to read the job description. Then convert the job description into a structured Python dictionary that enables precise qualification matching and is saved to session state as "job_description_dict" using save_job_description_dict_to_session.
 
 WORKFLOW:
 
 Step 1: READ JOB DESCRIPTION FROM SESSION STATE
-- Call read_from_session with key="job_description" to retrieve the raw job description text
+- TOOL CALL: Use the `read_from_session` tool with 'job_description' as key to retrieve the raw job description. THE ONLY KEY YOU ARE ALLOWED TO USE IS: key='job_description'.
 - Check the response: if "found" is false, return "ERROR: [job_description_ingest_agent] Job description not found in session state" and stop
 - Extract the job description text from the "value" field in the response
 
