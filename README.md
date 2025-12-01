@@ -1,13 +1,13 @@
 
 ## `README.md` Template: Agentic Resume Customization System
 
-### **\# Agentic Resume Customization System**
+### ** Agentic Resume Customization System**
 
 **Competition Track:** Concierge Agents  (for Good)
 
 This project implements a multi-agent AI system designed to automate and optimize the process of tailoring a job applicant's resume to a specific job description. By employing a self-correction loop, the system enforces high-fidelity, highly relevant output, significantly reducing the time required to optimize resumes for job applications.
 
-### **\#\# 1. Problem & Solution**
+### ** 1. Problem & Solution**
 
 #### **Problem**
 
@@ -22,7 +22,7 @@ The **Agentic Resume Customization System** automates this process using a coord
   * **Time Savings:** Estimated savings of **4+ hours** per application customization.
   * **Accuracy Guarantee:** The system is designed to produce a **high-accuracy output** (no made-up qualifications), enforced by the final Critic Agent.
 
-### **\#\# 2. System Architecture**
+### ** 2. System Architecture**
 
 The system is built as a sequential, multi-agent pipeline using the **Google Agent Development Kit (ADK)**.
 
@@ -50,7 +50,7 @@ The system is built as a sequential, multi-agent pipeline using the **Google Age
   * **Tooling:** Utilizes custom tools for document I/O (e.g., `read_pdf`, `write_md`).
   * **Observability:** Logging, tracing, and metrics are implemented from the start for debugging and performance monitoring.
 
-### **\#\# 3. Getting Started (Setup & Installation)**
+### ** 3. Getting Started (Setup & Installation)**
 
 These instructions are for setting up the environment and running the agent.
 
@@ -85,7 +85,7 @@ python main.py --resume_path="./data/my_generic_resume.pdf" --jd_path="./data/ta
 
 The final optimized resume will be saved to `./output/optimized_resume_[TIMESTAMP].md`.
 
-### **\#\# 4. Submission & References**
+### ** 4. Submission & References**
 
 | Artifact | Location |
 | :--- | :--- |
