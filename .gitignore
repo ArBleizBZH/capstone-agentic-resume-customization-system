@@ -53,6 +53,8 @@ Project_Documentation/
 CLAUDE.md
 docs/
 docs/sprints/
+testing/
+testing\test_runs_output
 
 # Internal engineering guide (not for version control)
 src/agents/ENGINEERING_GUIDE.md

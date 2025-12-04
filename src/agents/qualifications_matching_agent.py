@@ -73,15 +73,12 @@ def create_qualifications_matching_agent():
     """Create and return the Qualifications Matching Agent.
 
     This agent compares resume against job description using categorized qualifications
-    and creates preliminary match lists, saving them to session state.
+    and creates preliminary match lists (quality_matches and possible_quality_matches),
+    saving them to session state.
 
     Returns:
         LlmAgent: The configured Qualifications Matching Agent
-    """    
-    
-    from src.agents.qualifications_checker_agent import create_qualifications_checker_agent
-        
-    qualifications_checker_agent = create_qualifications_checker_agent()
+    """
 
     agent = LlmAgent(
         name="qualifications_matching_agent",
@@ -97,9 +94,9 @@ def create_qualifications_matching_agent():
                 )
             )
         ),
-        description="Finds preliminary matches between resume qualifications and job requirements using categorized comparison. Then have qualifications_checker_agent validate those lists.",
+        description="Finds preliminary matches between resume qualifications and job requirements using categorized comparison.",
         instruction="""You are the Qualifications Matching Agent.
-Your Goal: Read resume and job description from session state, create preliminary match lists, save them to session state, and have qualifications_checker_agent validate them.
+Your Goal: Read resume and job description from session state, create preliminary match lists, and save them to session state.
 
 WORKFLOW:
 
@@ -155,28 +152,19 @@ Step 4: SAVE POSSIBLE MATCHES TO SESSION STATE
 - If the tool response indicates "error": Log the error and return "ERROR: [qualifications_matching_agent] <INSERT ERROR MESSAGE FROM TOOL>" to parent agent, then STOP
 - If tool response indicates "success": Continue to Step 5
 
-
-STEP 5: CALL QUALIFICATIONS CHECKER
-- Call qualifications_checker_agent.
-- WAIT for its response.
-- The Checker agent will save the final 'quality_matches' to session state.
-- Only proceed to Step 6 after you receive a SUCCESS response from the Checker.
-- If the tool response indicates "error": Log the error and return "ERROR: [qualifications_checker_agent] <INSERT ERROR MESSAGE FROM TOOL>" to parent agent, then STOP
-- If tool response indicates "success": Continue to Step 6
-
-Step 6: RETURN SUCCESS MESSAGE - CRITICAL
-After the qualifications_checker_agent complete successfully, you MUST generate a final text response.
+Step 5: RETURN SUCCESS MESSAGE - CRITICAL
+After both save operations complete successfully, you MUST generate a final text response.
 **DO NOT RETURN None** or empty content.
 **DO NOT STOP** after the tool calls without generating this response.
 
 MANDATORY FINAL RESPONSE FORMAT:
-"SUCCESS: Identified and saved qualification matches to session state.
+"SUCCESS: Identified and saved preliminary qualification matches to session state.
 
 MATCH SUMMARY:
-- Quality matches: XX (Final list of validated matches)
-- Possible matches: XX (Count of possible matches before validation)
+- Quality matches: XX (High confidence matches)
+- Possible matches: XX (Needs validation)
 
-The final quality match list has been saved to session state and is ready for the next step."
+The match lists have been saved to session state and are ready for validation."
 
 ERROR HANDLING:
 
@@ -203,12 +191,8 @@ CRITICAL RULES:
 """,
         tools=[
             read_from_session,
-            AgentTool(agent=qualifications_checker_agent),
             save_quality_matches_to_session,
             save_possible_matches_to_session,
-        ],
-        sub_agents=[
-            qualifications_checker_agent
         ],
     )
 
