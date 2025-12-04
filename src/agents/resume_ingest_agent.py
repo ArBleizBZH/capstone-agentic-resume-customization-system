@@ -92,59 +92,43 @@ def create_resume_ingest_agent():
         ),
         description="Converts resume text to structured Python dict using the DICT SCHEMA defined below.",
         instruction="""You are the Resume Ingest Agent.
-Your Goal: Use read_from_session(key='resume') to read the resume. Then convert the resume into a structured Python dictionary that enables precise qualification matching and is saved to session state as "resume_dict" using save_resume_dict_to_session.
+
+Your task: Convert raw resume text from session state into a structured Python dict and save it.
 
 WORKFLOW:
-Step 1: READ RESUME FROM SESSION STATE
-- TOOL CALL: Use the `read_from_session` tool with 'resume' as key to retrieve the raw resume. THE ONLY KEY YOU ARE ALLOWED TO USE IS: read_from_session(key='resume')
-- Check the response: if "found" is false, return "ERROR: [resume_ingest_agent] Resume not found in session state" and stop
-- Extract the resume text from the "value" field in the response
 
-Step 2. MANDATORY CHECK AND PROCESSING:
-- If the output of the tool call is the string 'None' or starts with the string 'Error:', **IMMEDIATELY** stop and return a clean error message: "ERROR: Resume content failed to load from session."
-- If the output is the resume content, proceed to process it.
-- Convert the raw resume into the structured Python dictionary format specified in the DICT SCHEMA (contact_info, profile_summary, work_history, skills, education, certifications_licenses).
-- **After** successfully converting the resume to resume_dict, proceed to Step 3.
+Step 1: READ FROM SESSION
+- Call read_from_session(key='resume')
+- The tool returns: {"key": "resume", "value": "raw text...", "found": boolean}
+- If found is False: Return "ERROR: Resume not found in session state" and stop
+- If found is True: Extract the value field and proceed to Step 2
 
-Step 3: SAVE TO SESSION
-- Call save_resume_dict_to_session with the Python dictionary "resume_dict" as parameter
-- Check the tool response for status: "error"
-- If status is "error": Return "ERROR: [resume_ingest_agent] <INSERT ERROR MESSAGE FROM TOOL>" and stop
-
-Step 4: GENERATE FINAL RESPONSE
-- After the save tool completes successfully, you MUST generate a simple text response
-"SUCCESS: Resume content processed and structured dict saved to session state."
-
-**CRITICAL**: Steps 3 and 4 are BOTH required. Do NOT stop after calling the save tool.
-**DO NOT RETURN None** or empty content after the tool completes.
-After receiving the tool's success response, you MUST proceed to Step 4 and generate your final text response.
-
-CRITICAL RULES:
+Step 2: CONVERT TO STRUCTURED DICT
+- Parse the resume text into a Python dict named 'resume_dict'
 - Extract ONLY information explicitly stated in the source - NO FABRICATION
-- Omit empty/null fields - don't include keys with no data
-- Preserve exact wording (especially achievements) - NO rephrasing
-- Generate a Python dict structure, NOT a JSON string
-- **AFTER save tool succeeds: You MUST generate the final response below**
-- **DO NOT STOP after tool call - continue to Step 4**
+- Preserve exact wording from source, especially achievements and accomplishments
+- Omit any section or field not present in the source
+- Organize into logical sections (see structure guide below)
 
-DICT SCHEMA:
-- contact_info (required): name*, email*, address, phone, linkedin, github
-- profile_summary (optional object): professional_summary, professional_highlights[]
-- work_history (optional array): job objects with job_id (job_001, job_002...), job_company*, job_title*, job_operated_as, job_location, job_employment_dates, job_summary, job_achievements[], job_technologies[], job_skills[]
-- skills (optional object): category_name: [skills array]
-- education (optional array): institution*, dates, graduation_year, diploma
-- certifications_licenses (optional array): name*, issued_by, issued_date, skills[], additional_endorsements[]
-(*required fields within that section)
+Step 3: SAVE AND RESPOND
+- Call save_resume_dict_to_session(resume_dict=resume_dict)
+- The tool returns: {"status": "success|error", "message": "..."}
+- If status is "error": Return "ERROR: Failed to save - [error message]" and stop
+- If status is "success": Return "SUCCESS: Resume processed and saved to session state."
 
-IMPORTANT:
-- job_id sequence: job_001 = OLDEST job, increment chronologically
-- Jobs in array: chronological order (oldest first)
-- NO assumptions - if data not in source, omit the key
+CRITICAL: Step 3 requires completing BOTH the tool call AND the text response.
+After the save tool succeeds, you must generate the success message.
 
-MANDATORY FINAL RESPONSE FORMAT:
-After the save tool returns success, you MUST generate this exact response:
-
-"SUCCESS: Resume content processed and structured dict saved to session state."
+STRUCTURE GUIDE:
+- contact_info: name, email, and any contact details (phone, location, linkedin, github, etc)
+- profile_summary: summary, objective, or highlights if present
+- work_history: work experience in chronological order (oldest first)
+  - For each job: company, title, dates, location, responsibilities, achievements, technologies/skills
+  - Preserve achievements in exact wording
+  - Assign job_id as job_001, job_002, etc (oldest = job_001)
+- skills: organize by category if clear, otherwise group logically
+- education: institution, degree/diploma, dates, notable details
+- certifications_licenses: certifications, licenses, or credentials if present
 """,
 
     tools=[

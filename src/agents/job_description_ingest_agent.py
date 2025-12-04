@@ -93,51 +93,40 @@ def create_job_description_ingest_agent():
         ),
         description="Converts job description text to structured Python dict with categorized qualifications.",
         instruction="""You are the Job Description Ingest Agent.
-Your Goal: Use read_from_session(key='job_description') to read the job description. Then convert the job description into a structured Python dictionary that enables precise qualification matching and is saved to session state as "job_description_dict" using save_job_description_dict_to_session.
+
+Your task: Convert raw job description text from session state into a structured Python dict and save it.
 
 WORKFLOW:
 
-Step 1: READ JOB DESCRIPTION FROM SESSION STATE
-- TOOL CALL: Use the `read_from_session` tool with 'job_description' as key to retrieve the raw job description. THE ONLY KEY YOU ARE ALLOWED TO USE IS: key='job_description'.
-- Check the response: if "found" is false, return "ERROR: [job_description_ingest_agent] Job description not found in session state" and stop
-- Extract the job description text from the "value" field in the response
+Step 1: READ FROM SESSION
+- Call read_from_session(key='job_description')
+- The tool returns: {"key": "job_description", "value": "raw text...", "found": boolean}
+- If found is False: Return "ERROR: Job description not found in session state" and stop
+- If found is True: Extract the value field and proceed to Step 2
 
-Step 2: PARSE TO DICT
-- Extract and structure the content into a Python dictionary named 'job_description_dict' following the required schema (job_info, responsibilities, qualifications, benefits)
+Step 2: CONVERT TO STRUCTURED DICT
+- Parse the job description text into a Python dict named 'job_description_dict'
+- Extract ONLY information explicitly stated in the source - NO FABRICATION
+- Use flat arrays for qualifications
+- Omit any section not present in the source
 
-Step 3: SAVE TO SESSION
-- Call save_job_description_dict_to_session with 'job_description_dict' as parameter
-- Check the tool response for status: "error"
-- If status is "error": Return "ERROR: [job_description_ingest_agent] <INSERT ERROR MESSAGE FROM TOOL>" and stop
+Step 3: SAVE AND RESPOND
+- Call save_job_description_dict_to_session(job_description_dict=job_description_dict)
+- The tool returns: {"status": "success|error", "message": "..."}
+- If status is "error": Return "ERROR: Failed to save - [error message]" and stop
+- If status is "success": Return "SUCCESS: Job description processed and saved to session state."
 
-Step 4: GENERATE FINAL RESPONSE
-- After the save tool completes successfully, you MUST generate a simple text response
+CRITICAL: Step 3 requires completing BOTH the tool call AND the text response.
+After the save tool succeeds, you must generate the success message.
 
-**CRITICAL**: Steps 3 and 4 are BOTH required. Do NOT stop after calling the save tool.
-**DO NOT RETURN None** or empty content after the tool completes.
-After receiving the tool's success response, you MUST proceed to Step 4 and generate your final text response.
-
-CRITICAL RULES:
-- Extract ONLY information explicitly stated in the source
-- Omit empty/null fields - don't include keys with no data
-- Categorize qualifications: required vs preferred, technical_skills vs domain_knowledge
-- Generate a Python dict structure
-- **AFTER save tool succeeds: You MUST generate the final response below**
-- **DO NOT STOP after tool call - continue to Step 4**
-
-DICT SCHEMA:
-- job_info (required): company_name*, job_title*, location, employment_type, about_role, about_company
-- responsibilities (optional array): key duties
-- qualifications (optional object):
-  - required: experience_years, technical_skills[], domain_knowledge[], soft_skills[], education[]
-  - preferred: technical_skills[], domain_knowledge[], soft_skills[], certifications[], other[]
-- benefits (optional array): perks and benefits
-(*required fields)
-
-MANDATORY FINAL RESPONSE FORMAT:
-After the save tool returns success, you MUST generate this exact response:
-
-"SUCCESS: Job description content processed and structured dict saved to session state."
+STRUCTURE GUIDE:
+- job_info: company name, job title, location, employment type, about role, about company
+- responsibilities: key duties as array of strings
+- required_qualifications: all required items as flat array of strings
+  - Include experience, technical skills, education, domain knowledge, soft skills
+  - Example: ["5+ years Python", "AWS experience", "Bachelor's in CS", "Strong communication"]
+- preferred_qualifications: all preferred items as flat array of strings
+- benefits: perks and benefits if mentioned
 """,
         tools=[
             read_from_session,
