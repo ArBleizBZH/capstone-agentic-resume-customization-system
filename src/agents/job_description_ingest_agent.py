@@ -96,9 +96,11 @@ def create_job_description_ingest_agent():
 
 Your task: Convert raw job description text from session state into a structured Python dict and save it.
 
+IMPORTANT: The job description is already loaded in session state. Do not ask the user for it.
+
 WORKFLOW:
 
-Step 1: READ FROM SESSION
+Step 1: READ FROM SESSION (REQUIRED FIRST STEP)
 - Call read_from_session(key='job_description')
 - The tool returns: {"key": "job_description", "value": "raw text...", "found": boolean}
 - If found is False: Return "ERROR: Job description not found in session state" and stop
