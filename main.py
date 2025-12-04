@@ -139,7 +139,13 @@ async def main():
         
         # 2. Call load_data() to load the files contents
         pre_loaded_state = load_data()
-        
+
+        # Debug: Check what was loaded
+        print(f"DEBUG: pre_loaded_state keys: {list(pre_loaded_state.keys())}")
+        for key in pre_loaded_state.keys():
+            content_preview = str(pre_loaded_state[key])[:100] if pre_loaded_state[key] else "None"
+            print(f"DEBUG: {key} = {content_preview}...")
+
         # Create the runner and get metrics plugin
         print("Creating runner...")
         runner, metrics_plugin, session_id = await create_runner(initial_state=pre_loaded_state)
@@ -147,12 +153,26 @@ async def main():
         # Full workflow test with actual input files
         print("\nRunning full workflow with input files...")
 
-        response = await runner.run_debug(
-            "Please optimize my resume for this job application. "
-            "Resume file: resume.md. "
-            "Job description file: job_description.md.",
-            session_id=session_id
+        # Create message content in ADK format
+        from google.genai import types
+        user_message = types.Content(
+            role='user',
+            parts=[types.Part(text="Please optimize my resume for this job application. "
+                                  "Resume file: resume.md. "
+                                  "Job description file: job_description.md.")]
         )
+
+        # Run using run_async with session_id (ADK standard pattern)
+        final_response = None
+        async for event in runner.run_async(
+            user_id="default_user",
+            session_id=session_id,
+            new_message=user_message
+        ):
+            # Capture final response
+            if event.is_final_response() and event.content and event.content.parts:
+                final_response = event.content.parts[0].text
+                print(f"\n{event.author} > {final_response}")
 
         print("\n" + "="*60)
         print("Sprint 012 E2E Test Complete!")

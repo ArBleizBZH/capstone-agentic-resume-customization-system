@@ -81,6 +81,13 @@ async def create_runner(initial_state: dict):
         state=initial_state
     )
 
+    # Debug: Check session state
+    print(f"DEBUG: Session created with ID: {session.id}")
+    print(f"DEBUG: Session state keys: {list(session.state.keys())}")
+    for key in list(session.state.keys()):
+        value_preview = str(session.state.get(key))[:100] if session.state.get(key) else "None"
+        print(f"DEBUG: session.state['{key}'] = {value_preview}...")
+
     # Create runner
     runner = Runner(
         app=app,
