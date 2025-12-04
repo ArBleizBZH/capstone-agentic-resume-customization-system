@@ -95,9 +95,11 @@ def create_resume_ingest_agent():
 
 Your task: Convert raw resume text from session state into a structured Python dict and save it.
 
+IMPORTANT: The resume is already loaded in session state. Do not ask the user for it.
+
 WORKFLOW:
 
-Step 1: READ FROM SESSION
+Step 1: READ FROM SESSION (REQUIRED FIRST STEP)
 - Call read_from_session(key='resume')
 - The tool returns: {"key": "resume", "value": "raw text...", "found": boolean}
 - If found is False: Return "ERROR: Resume not found in session state" and stop
